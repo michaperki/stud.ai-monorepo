@@ -11,7 +11,8 @@ const useRecorder = (onRecordingComplete) => {
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
 
-  const startRecording = useCallback(async () => {
+  // NOTE: startRecording now accepts a 'word' param.
+  const startRecording = useCallback(async (word) => {
     try {
       audioChunksRef.current = [];
       const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -33,8 +34,9 @@ const useRecorder = (onRecordingComplete) => {
         setAudioUrl(url);
         setIsRecording(false);
 
+        // Pass both blob and word into onRecordingComplete
         if (onRecordingComplete) {
-          onRecordingComplete(blob);
+          onRecordingComplete(blob, word);
         }
 
         if (audioStream) {

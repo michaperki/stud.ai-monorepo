@@ -48,7 +48,8 @@ async def check_answer(word: str, file: UploadFile = File(...)):
 
         return JSONResponse({
             "user_response": user_response,
-            "is_correct": is_correct
+            "is_correct": is_correct,
+            "correct_answer": correct_answer  # <-- add this
         })
 
     except Exception as e:

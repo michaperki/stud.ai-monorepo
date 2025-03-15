@@ -10,12 +10,14 @@ export const fetchNextWord = async () => {
 };
 
 export const checkAnswer = async (word, audioBlob) => {
+  if (!word) {
+    throw new Error("No word provided to checkAnswer");
+  }
   const formData = new FormData();
   formData.append('file', audioBlob);
-  
   const response = await axios.post(
-    `${API_BASE}/check_answer/${word}`, 
-    formData, 
+    `${API_BASE}/check_answer/${encodeURIComponent(word)}`,
+    formData,
     {
       headers: {
         'Content-Type': 'multipart/form-data'
