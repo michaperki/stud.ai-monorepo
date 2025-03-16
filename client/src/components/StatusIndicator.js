@@ -1,15 +1,55 @@
-
-
 // src/components/StatusIndicator.js
 import React from 'react';
+import { motion } from 'framer-motion';
+import { BsMic, BsStopCircle, BsCheckCircle } from 'react-icons/bs';
 
 const StatusIndicator = ({ recordingState }) => {
+  // Different configurations based on state
+  const stateConfig = {
+    idle: {
+      icon: <BsMic />,
+      text: 'Ready',
+      className: 'idle',
+      animate: {}
+    },
+    recording: {
+      icon: <BsMic />,
+      text: 'Recording...',
+      className: 'recording',
+      animate: { 
+        scale: [1, 1.1, 1],
+        opacity: [1, 0.8, 1]
+      }
+    },
+    recorded: {
+      icon: <BsCheckCircle />,
+      text: 'Recording Complete',
+      className: 'recorded',
+      animate: {}
+    }
+  };
+  
+  const config = stateConfig[recordingState] || stateConfig.idle;
+  
   return (
-    <div className="status-indicator">
-      {recordingState === 'idle' && <span className="status idle">Ready</span>}
-      {recordingState === 'recording' && <span className="status recording">Recording...</span>}
-      {recordingState === 'recorded' && <span className="status recorded">Recording Complete</span>}
-    </div>
+    <motion.div 
+      className={`status-indicator ${config.className}`}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      <motion.div 
+        className="status-icon"
+        animate={config.animate}
+        transition={{ 
+          repeat: recordingState === 'recording' ? Infinity : 0,
+          duration: 1.5 
+        }}
+      >
+        {config.icon}
+      </motion.div>
+      <span className="status-text">{config.text}</span>
+    </motion.div>
   );
 };
 
