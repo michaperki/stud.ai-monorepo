@@ -1,7 +1,7 @@
 // src/components/FeedbackDisplay.js
 import React from 'react';
 import { motion } from 'framer-motion';
-import { BsCheckCircleFill, BsXCircleFill, BsArrowRightCircle } from 'react-icons/bs';
+import { BsCheckCircleFill, BsXCircleFill, BsArrowRightCircle, BsXCircle, BsMic } from 'react-icons/bs';
 
 const FeedbackDisplay = ({ feedback, loading, onNextWord, sessionPaused }) => {
   if (!feedback) return null;
@@ -53,18 +53,43 @@ const FeedbackDisplay = ({ feedback, loading, onNextWord, sessionPaused }) => {
         )}
       </div>
       
-      {isCorrect && (
-        <motion.button
-          className="button primary next-word-button"
-          onClick={onNextWord}
-          disabled={loading || sessionPaused}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          <span>Next Word</span>
-          <BsArrowRightCircle size={18} />
-        </motion.button>
-      )}
+      <div className="feedback-buttons">
+        {isCorrect ? (
+          <motion.button
+            className="button primary feedback-button"
+            onClick={onNextWord}
+            disabled={loading || sessionPaused}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <span>Next Word</span>
+            <BsArrowRightCircle size={18} />
+          </motion.button>
+        ) : (
+          <>
+            <motion.button
+              className="button secondary feedback-button"
+              onClick={() => window.dispatchEvent(new CustomEvent('retry-pronunciation'))}
+              disabled={loading || sessionPaused}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <span>Try Again</span>
+              <BsMic size={18} />
+            </motion.button>
+            <motion.button
+              className="button outline feedback-button"
+              onClick={onNextWord}
+              disabled={loading || sessionPaused}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <span>Skip This Word</span>
+              <BsArrowRightCircle size={18} />
+            </motion.button>
+          </>
+        )}
+      </div>
     </motion.div>
   );
 };

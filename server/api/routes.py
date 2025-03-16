@@ -1,4 +1,3 @@
-
 from fastapi import APIRouter, HTTPException, UploadFile, File, Query
 from fastapi.responses import JSONResponse
 import random, base64, os, traceback, tempfile, logging
@@ -6,6 +5,7 @@ import soundfile as sf
 
 from core.audio import synthesize_speech
 from core.ai import transcribe_audio, similarity
+from core.config import settings
 from data.vocab import VOCAB, REV_VOCAB
 
 import logging
@@ -37,7 +37,8 @@ async def next_word(lang: str = Query("iw")):
         logger.debug(f"Selected word: {hebrew_word}, lang={lang}, tts='{text_for_tts}'")
         return JSONResponse({
             "word": response_word,       # Either Hebrew or English
-            "audio_base64": audio_base64
+            "audio_base64": audio_base64,
+            "audio_settings": settings.AUDIO_SETTINGS  # Include audio settings in response
         })
     except Exception as e:
         logger.exception("Error in next_word")
@@ -86,4 +87,13 @@ async def check_answer(word: str, file: UploadFile = File(...)):
 
     except Exception as e:
         logger.exception("Error in check_answer")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/get_audio_settings")
+async def get_audio_settings():
+    """Return the current audio recording settings"""
+    try:
+        return JSONResponse(settings.AUDIO_SETTINGS)
+    except Exception as e:
+        logger.exception("Error in get_audio_settings")
         raise HTTPException(status_code=500, detail=str(e))

@@ -1,7 +1,7 @@
 // src/components/StatusIndicator.js
 import React from 'react';
 import { motion } from 'framer-motion';
-import { BsMic, BsStopCircle, BsCheckCircle } from 'react-icons/bs';
+import { BsMic, BsStopCircle, BsCheckCircle, BsMicMute } from 'react-icons/bs';
 
 const StatusIndicator = ({ recordingState }) => {
   // Different configurations based on state
@@ -25,6 +25,12 @@ const StatusIndicator = ({ recordingState }) => {
       icon: <BsCheckCircle />,
       text: 'Recording Complete',
       className: 'recorded',
+      animate: {}
+    },
+    'no-mic-mode': {
+      icon: <BsMicMute />,
+      text: 'No Microphone Mode',
+      className: 'no-mic',
       animate: {}
     }
   };

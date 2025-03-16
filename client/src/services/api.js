@@ -103,6 +103,26 @@ export const checkAnswer = async (word, audioBlob) => {
 };
 
 /**
+ * Get audio recording settings from the server
+ * @returns {Promise<Object>} - Audio recording settings
+ */
+export const getAudioSettings = async () => {
+  try {
+    const response = await api.get('/get_audio_settings');
+    return response.data;
+  } catch (error) {
+    console.warn('Failed to fetch audio settings:', error);
+    // Return default settings if server request fails
+    return {
+      silence_threshold: 15,
+      silence_duration: 1000,
+      min_recording_time: 500,
+      max_recording_time: 8000
+    };
+  }
+};
+
+/**
  * Get user statistics
  * @returns {Promise<Object>} - User stats
  */

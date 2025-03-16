@@ -1,7 +1,6 @@
 // src/hooks/useRecorder.js
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
-import * as api from '../services/api';
 
 const useRecorder = (onRecordingComplete, onMicrophoneError) => {
   const [isRecording, setIsRecording] = useState(false);
@@ -10,39 +9,11 @@ const useRecorder = (onRecordingComplete, onMicrophoneError) => {
   const [stream, setStream] = useState(null);
   const [error, setError] = useState(null);
   const [microphoneAvailable, setMicrophoneAvailable] = useState(null); // null = unknown, true = available, false = unavailable
-  const [audioSettings, setAudioSettings] = useState({
-    silenceThreshold: 15,     // Default values, will be overridden when fetched from server
-    silenceDuration: 1000,    
-    minRecordingTime: 500,   
-    maxRecordingTime: 8000   
-  });
   
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const currentWordRef = useRef(null);
   const recordingTimerRef = useRef(null);
-  
-  // Fetch audio settings from server on mount
-  useEffect(() => {
-    const fetchAudioSettings = async () => {
-      try {
-        const settings = await api.getAudioSettings();
-        if (settings) {
-          console.log('Loaded audio settings from server:', settings);
-          setAudioSettings({
-            silenceThreshold: settings.silence_threshold || 15,
-            silenceDuration: settings.silence_duration || 1000,
-            minRecordingTime: settings.min_recording_time || 500,
-            maxRecordingTime: settings.max_recording_time || 8000
-          });
-        }
-      } catch (error) {
-        console.warn('Could not fetch audio settings, using defaults:', error);
-      }
-    };
-    
-    fetchAudioSettings();
-  }, []);
   
   // Function to clean up existing stream and recorder
   const cleanupMediaResources = useCallback(() => {
@@ -86,60 +57,21 @@ const useRecorder = (onRecordingComplete, onMicrophoneError) => {
       recordingTimerRef.current = null;
     }
     
-    // Make sure we wait a small bit before stopping if we just started
-    // This helps prevent "Invalid state" errors when stopping too quickly after starting
-    const stopWithDelay = (delay = 0) => {
-      if (delay > 0) {
-        setTimeout(() => {
-          performStop();
-        }, delay);
-      } else {
-        performStop();
-      }
-    };
-    
-    const performStop = () => {
-      if (mediaRecorderRef.current) {
-        try {
-          if (mediaRecorderRef.current.state === 'recording') {
-            console.log('Stopping MediaRecorder');
-            mediaRecorderRef.current.stop();
-          } else if (mediaRecorderRef.current.state === 'paused') {
-            console.log('Resuming and then stopping MediaRecorder');
-            mediaRecorderRef.current.resume();
-            // Small delay to ensure resume completes before stopping
-            setTimeout(() => {
-              if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-                mediaRecorderRef.current.stop();
-              }
-            }, 100);
-          } else {
-            console.log('MediaRecorder already inactive, just cleaning up');
-            cleanupMediaResources();
-            setIsRecording(false);
-          }
-        } catch (error) {
-          console.error('Error stopping recording:', error);
-          
-          // Clean up anyway
-          cleanupMediaResources();
-          setIsRecording(false);
-        }
-      } else {
-        console.log('MediaRecorder not available, nothing to stop');
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      try {
+        console.log('Stopping MediaRecorder');
+        mediaRecorderRef.current.stop();
+      } catch (error) {
+        console.error('Error stopping recording:', error);
+        
+        // Clean up anyway
+        cleanupMediaResources();
         setIsRecording(false);
       }
-    };
-    
-    // Check if we just started recording - if so add a small delay before stopping
-    // This prevents "Invalid state" errors when stopping too quickly after starting
-    const timeSinceRecordingStarted = isRecording ? Date.now() - (mediaRecorderRef.current?._startTime || 0) : Infinity;
-    if (timeSinceRecordingStarted < 500) { // If less than 500ms since start
-      stopWithDelay(500 - timeSinceRecordingStarted);
     } else {
-      stopWithDelay(0);
+      console.log('MediaRecorder not active, nothing to stop');
     }
-  }, [cleanupMediaResources, isRecording]);
+  }, [cleanupMediaResources]);
   
   // Test microphone availability on component mount
   useEffect(() => {
@@ -358,8 +290,11 @@ const useRecorder = (onRecordingComplete, onMicrophoneError) => {
       
       mediaRecorderRef.current = mediaRecorder;
       
-      // Log current audio settings
-      console.log('Current audio settings:', audioSettings);
+      // ===== FIX: Increase fixed recording duration =====
+      const FIXED_RECORDING_DURATION = 8000; // 8 seconds instead of 5
+      let recordingStartTime = null;
+      
+      console.log(`Will record for exactly ${FIXED_RECORDING_DURATION/1000} seconds`);
       
       // Handle data available event
       mediaRecorder.ondataavailable = (event) => {
@@ -380,7 +315,7 @@ const useRecorder = (onRecordingComplete, onMicrophoneError) => {
           recordingTimerRef.current = null;
         }
         
-        // Add a minimum threshold for chunk size
+        // ===== FIX: Add a minimum threshold for chunk size =====
         let totalSize = 0;
         audioChunksRef.current.forEach(chunk => {
           totalSize += chunk.size;
@@ -399,6 +334,7 @@ const useRecorder = (onRecordingComplete, onMicrophoneError) => {
             // Set state back to idle
             if (onMicrophoneError) {
               // Use onMicrophoneError as a hook to reset UI state
+              // But provide a unique error message so App.js can handle it differently
               onMicrophoneError(new Error('RETRY_RECORDING'));
             }
           }, 1000);
@@ -434,51 +370,33 @@ const useRecorder = (onRecordingComplete, onMicrophoneError) => {
         setIsRecording(false);
       };
       
-      // Add a delay before recording starts
-      // Give the user time to prepare after hearing the word and ensure MediaRecorder is ready
-      const startRecorderWithDelay = () => {
-        console.log('Starting MediaRecorder with delay');
+      // ===== FIX: Add a delay before recording starts =====
+      // Give the user time to prepare after hearing the word
+      setTimeout(() => {
+        // Start the recorder
+        console.log('Starting MediaRecorder with small delay');
         
-        // Adding a safety check in case the recorder was cleaned up during the delay
-        if (!mediaRecorderRef.current) {
-          console.warn('MediaRecorder was already cleaned up before start');
-          return;
-        }
-        
+        // Start collecting data right away  
         try {
-          // Double-check to prevent "Failed to execute 'start' on 'MediaRecorder'" errors
-          if (mediaRecorderRef.current.state === 'inactive') {
-            mediaRecorderRef.current._startTime = Date.now(); // Track when we started
-            mediaRecorderRef.current.start(100); // Collect data every 100ms
-            console.log('MediaRecorder started successfully');
-            setIsRecording(true);
-            
-            // Schedule the recording to stop after the max recording time
-            recordingTimerRef.current = setTimeout(() => {
-              console.log(`Maximum recording time (${audioSettings.maxRecordingTime}ms) reached - stopping recording`);
-              if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-                stopRecording();
-              }
-            }, audioSettings.maxRecordingTime);
-          } else {
-            console.error('Cannot start MediaRecorder - not in inactive state');
-            cleanupMediaResources();
-            if (onMicrophoneError) {
-              onMicrophoneError(new Error('MediaRecorder in invalid state before starting'));
+          mediaRecorder.start(100); // Collect data every 100ms
+          setIsRecording(true);
+          recordingStartTime = Date.now();
+          
+          // Schedule the recording to stop after the fixed duration
+          recordingTimerRef.current = setTimeout(() => {
+            console.log(`Fixed duration (${FIXED_RECORDING_DURATION/1000}s) reached - stopping recording`);
+            if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+              stopRecording();
             }
-          }
+          }, FIXED_RECORDING_DURATION);
         } catch (startError) {
           console.error('Error starting MediaRecorder:', startError);
-          toast.error('Error starting recording. Please try again.');
           cleanupMediaResources();
           if (onMicrophoneError) {
             onMicrophoneError(startError);
           }
         }
-      };
-      
-      // Add a slightly longer delay to ensure the previous MediaRecorder is fully cleaned up
-      setTimeout(startRecorderWithDelay, 800); // Increase delay to 800ms
+      }, 500); // Add a 500ms delay to give user time to prepare
       
     } catch (error) {
       console.error('Error starting recording:', error);
@@ -491,7 +409,7 @@ const useRecorder = (onRecordingComplete, onMicrophoneError) => {
       // so we just need to throw the error here
       throw error;
     }
-  }, [onRecordingComplete, onMicrophoneError, stream, microphoneAvailable, cleanupMediaResources, stopRecording, audioSettings]);
+  }, [onRecordingComplete, onMicrophoneError, stream, microphoneAvailable, cleanupMediaResources, stopRecording]);
 
   // Cancel recording and discard data
   const cancelRecording = useCallback(() => {
@@ -568,24 +486,6 @@ const useRecorder = (onRecordingComplete, onMicrophoneError) => {
       cleanupMediaResources();
     };
   }, [cleanupMediaResources]);
-  
-  // Add additional safety - ensure we have a cooldown period between recordings
-  const [isRecordingCooldown, setIsRecordingCooldown] = useState(false);
-  
-  useEffect(() => {
-    if (!isRecording && isRecordingCooldown) {
-      // Add a cooldown period after stopping recording before allowing a new recording
-      const cooldownTimer = setTimeout(() => {
-        setIsRecordingCooldown(false);
-      }, 1000); // 1 second cooldown
-      
-      return () => clearTimeout(cooldownTimer);
-    }
-    
-    if (isRecording && !isRecordingCooldown) {
-      setIsRecordingCooldown(true);
-    }
-  }, [isRecording, isRecordingCooldown]);
 
   return {
     isRecording,
@@ -594,7 +494,6 @@ const useRecorder = (onRecordingComplete, onMicrophoneError) => {
     stream,
     error,
     microphoneAvailable,
-    audioSettings,
     startRecording,
     stopRecording,
     cancelRecording,

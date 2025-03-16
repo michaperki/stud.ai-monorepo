@@ -16,5 +16,13 @@ class Settings:
         "http://127.0.0.1:5173",  # Vite default
         "*"  # Allow all origins - only for development, remove in production
     ]
+    
+    # Audio recording settings
+    AUDIO_SETTINGS = {
+        "silence_threshold": 15,     # Higher value = less sensitive to background noise (0-100)
+        "silence_duration": 1000,    # Time in ms of silence before stopping recording
+        "min_recording_time": 500,   # Minimum recording time in ms to prevent premature cutoff
+        "max_recording_time": 8000,  # Maximum recording time in ms
+    }
 
 settings = Settings()

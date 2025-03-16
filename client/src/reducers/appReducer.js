@@ -24,6 +24,11 @@ export const initialState = {
   attemptCount: 0,
   lastWord: '',
   hintText: null,
+  microphoneError: {
+    isOpen: false,
+    message: '',
+  },
+  practiceWithoutMic: false,
   session: {
     active: false,
     paused: false,
@@ -37,7 +42,7 @@ export const initialState = {
     incorrectAttempts: 0,
   },
   settings: {
-    promptLanguage: 'iw', // Hebrew (iw) by default, can also be 'en'
+    promptLanguage: 'en', // Hebrew (iw) by default, can also be 'en'
     silenceThreshold: 20,
     silenceDuration: 1500,
     autoPlayTTS: true,
@@ -73,6 +78,23 @@ export function appReducer(state, action) {
       return { 
         ...state, 
         error: action.payload 
+      };
+      
+    case 'SET_MICROPHONE_ERROR':
+      return {
+        ...state,
+        microphoneError: {
+          isOpen: action.payload.isOpen,
+          message: action.payload.message || state.microphoneError.message,
+        }
+      };
+      
+    case 'SET_PRACTICE_WITHOUT_MIC':
+      return {
+        ...state,
+        practiceWithoutMic: action.payload,
+        // Reset the recording state when switching to practice without mic
+        recordingState: action.payload ? 'idle' : state.recordingState,
       };
       
     case 'SET_RECORDING_STATE':

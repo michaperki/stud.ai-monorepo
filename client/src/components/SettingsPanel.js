@@ -2,8 +2,14 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BsChevronDown, BsChevronUp, BsGear } from 'react-icons/bs';
+import AudioSettings from './AudioSettings';
 
-export default function SettingsPanel({ promptLanguage, onChangeLanguage }) {
+export default function SettingsPanel({ 
+  promptLanguage, 
+  onChangeLanguage, 
+  audioSettings,
+  onUpdateAudioSettings
+}) {
   const [expanded, setExpanded] = useState(false);
   
   const toggleExpanded = () => setExpanded(!expanded);
@@ -44,7 +50,15 @@ export default function SettingsPanel({ promptLanguage, onChangeLanguage }) {
               </select>
             </div>
             
-            {/* Additional settings can be added here */}
+            {/* Add audio settings component */}
+            {audioSettings && (
+              <AudioSettings 
+                audioSettings={audioSettings}
+                onUpdateSettings={onUpdateAudioSettings}
+                expanded={false}
+              />
+            )}
+            
             <div className="settings-info">
               <p>
                 <strong>Tip:</strong> The "Hebrew" option will give you Hebrew words 

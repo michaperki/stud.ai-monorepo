@@ -1,24 +1,26 @@
-// src/components/AudioVisualizer.js
+// src/components/SimpleAudioVisualizer.js
 import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 
-const AudioVisualizer = ({ stream, onSilenceDetected }) => {
+const SimpleAudioVisualizer = ({ 
+  stream, 
+  onSilenceDetected, 
+  silenceThreshold = 15,  // Default values, will be overridden by props
+  silenceDuration = 1000,
+  minRecordingTime = 500,
+  maxRecordingTime = 8000 
+}) => {
   const canvasRef = useRef(null);
   const animationRef = useRef(null);
   const silenceStartRef = useRef(null);
+  const recordingStartTimeRef = useRef(null);
   const [volumeLevel, setVolumeLevel] = useState(0);
-  
-  // Configurable parameters with more forgiving values
-  const silenceThreshold = 5; // Lower threshold to be more sensitive (original was 20)
-  const silenceDuration = 2000; // Longer time to confirm silence (2 sec instead of 1.5)
-  const initialDelay = 3000; // Longer delay before silence detection starts (3 sec instead of 1)
-  const forceCaptureTime = 1500; // Ensure we capture at least this much audio before allowing silence detection
+  const [isListeningForSilence, setIsListeningForSilence] = useState(false);
   
   useEffect(() => {
     if (!stream || !canvasRef.current) return;
     
-    let isListeningForSilence = false;
-    let recordingStartTime = Date.now();
+    recordingStartTimeRef.current = Date.now();
     const audioCtx = new AudioContext();
     const analyser = audioCtx.createAnalyser();
     const source = audioCtx.createMediaStreamSource(stream);
@@ -34,12 +36,18 @@ const AudioVisualizer = ({ stream, onSilenceDetected }) => {
     const canvasWidth = canvas.width;
     const canvasHeight = canvas.height;
     
-    // Enable silence detection after initial delay
+    // Enable silence detection after minimum recording time
     setTimeout(() => {
-      recordingStartTime = Date.now();
-      isListeningForSilence = true;
       console.log('Silence detection activated after initial delay');
-    }, initialDelay);
+      setIsListeningForSilence(true);
+    }, minRecordingTime);
+    
+    // Set a maximum recording duration
+    const maxRecordingTimer = setTimeout(() => {
+      console.log('Maximum recording time reached, stopping recording');
+      if (onSilenceDetected) onSilenceDetected();
+      cancelAnimationFrame(animationRef.current);
+    }, maxRecordingTime);
     
     const draw = () => {
       animationRef.current = requestAnimationFrame(draw);
@@ -58,7 +66,8 @@ const AudioVisualizer = ({ stream, onSilenceDetected }) => {
         sum += dataArray[i];
       }
       const avgVolume = sum / bufferLength / 255.0;
-      setVolumeLevel(avgVolume * 100);
+      const volumePercent = avgVolume * 100;
+      setVolumeLevel(volumePercent);
       
       // Draw frequency bars
       const barWidth = (canvasWidth / bufferLength) * 2.5;
@@ -87,15 +96,13 @@ const AudioVisualizer = ({ stream, onSilenceDetected }) => {
         x += barWidth;
       }
       
-      // Detect silence - only if we've been recording long enough
-      if (isListeningForSilence && 
-          Date.now() - recordingStartTime > forceCaptureTime && // Ensure minimum recording time
-          avgVolume < silenceThreshold / 100) {
+      // Detect silence - only if we're listening for it
+      if (isListeningForSilence && volumePercent < silenceThreshold) {
         if (!silenceStartRef.current) {
           silenceStartRef.current = Date.now();
           console.log('Potential silence detected, starting silence timer');
         } else if (Date.now() - silenceStartRef.current > silenceDuration) {
-          console.log('🤫 Silence confirmed after sufficient duration. Stopping recording...');
+          console.log('Silence confirmed after sufficient duration. Stopping recording...');
           if (onSilenceDetected) onSilenceDetected();
           cancelAnimationFrame(animationRef.current);
         }
@@ -110,11 +117,12 @@ const AudioVisualizer = ({ stream, onSilenceDetected }) => {
     draw();
     
     return () => {
+      clearTimeout(maxRecordingTimer);
       cancelAnimationFrame(animationRef.current);
       source.disconnect();
       audioCtx.close();
     };
-  }, [stream, onSilenceDetected]);
+  }, [stream, onSilenceDetected, silenceThreshold, silenceDuration, minRecordingTime, maxRecordingTime]);
   
   return (
     <div className="audio-visualizer-container">
@@ -138,9 +146,19 @@ const AudioVisualizer = ({ stream, onSilenceDetected }) => {
             transition={{ duration: 0.1 }}
           />
         </div>
+        {isListeningForSilence && (
+          <div className="silence-threshold-indicator" style={{ 
+            position: 'relative', 
+            left: `${silenceThreshold}%`, 
+            top: '-8px',
+            width: '2px',
+            height: '8px',
+            backgroundColor: 'rgba(255, 255, 255, 0.5)'
+          }} />
+        )}
       </div>
     </div>
   );
 };
 
-export default AudioVisualizer;
+export default SimpleAudioVisualizer;
