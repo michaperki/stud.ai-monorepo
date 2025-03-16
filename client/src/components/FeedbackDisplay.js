@@ -2,7 +2,7 @@
 // src/components/FeedbackDisplay.js
 import React from 'react';
 
-const FeedbackDisplay = ({ feedback, loading, onNextWord }) => {
+const FeedbackDisplay = ({ feedback, loading }) => {
   if (!feedback) return null;
   
   return (
@@ -15,14 +15,8 @@ const FeedbackDisplay = ({ feedback, loading, onNextWord }) => {
         ) : (
           <p className="incorrect-answer">Try again! 🔄</p>
         )}
+        <p>Correct answer: <strong>{feedback.correct_answer}</strong></p>
       </div>
-      <button 
-        className="button" 
-        onClick={onNextWord}
-        disabled={loading}
-      >
-        Next Word
-      </button>
     </div>
   );
 };
