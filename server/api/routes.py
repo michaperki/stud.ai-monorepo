@@ -97,3 +97,54 @@ async def get_audio_settings():
     except Exception as e:
         logger.exception("Error in get_audio_settings")
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/get_pronunciation")
+async def get_pronunciation(word: str = Query(...), lang: str = Query("iw")):
+    """Get pronunciation audio for a specific word"""
+    try:
+        logger.debug(f"Pronunciation request received for word: '{word}', language: '{lang}'")
+        
+        # For Hebrew words that need English pronunciation
+        if lang == "en":
+            # Check if this is a Hebrew word in our vocabulary
+            if word in VOCAB:
+                # Get the English translation
+                english_word = VOCAB[word]
+                logger.debug(f"Found Hebrew word in vocabulary, translating to English: '{english_word}'")
+                
+                # Generate audio with English voice saying the English word
+                pronunciation_audio = synthesize_speech(english_word, language_code="en")
+                logger.debug(f"Generated ENGLISH pronunciation for '{english_word}'")
+            else:
+                # If not in vocabulary, try direct pronunciation (but this may not work well)
+                logger.debug(f"Word not found in Hebrew vocabulary, trying direct pronunciation")
+                pronunciation_audio = synthesize_speech(word, language_code="en")
+                logger.debug(f"Generated direct English pronunciation for '{word}'")
+        
+        # For English words that need Hebrew pronunciation
+        elif lang == "iw":
+            # Check if this is an English word in our reverse vocabulary
+            if word in REV_VOCAB:
+                # Get the Hebrew translation
+                hebrew_word = REV_VOCAB[word]
+                logger.debug(f"Found English word in vocabulary, translating to Hebrew: '{hebrew_word}'")
+                
+                # Generate audio with Hebrew voice saying the Hebrew word
+                pronunciation_audio = synthesize_speech(hebrew_word, language_code="iw")
+                logger.debug(f"Generated HEBREW pronunciation for '{hebrew_word}'")
+            else:
+                # If not in vocabulary, try direct pronunciation
+                logger.debug(f"Word not found in English vocabulary, trying direct pronunciation")
+                pronunciation_audio = synthesize_speech(word, language_code="iw")
+                logger.debug(f"Generated direct Hebrew pronunciation for '{word}'")
+        
+        # Return the audio as base64
+        audio_base64 = base64.b64encode(pronunciation_audio).decode("utf-8")
+        
+        return JSONResponse({
+            "word": word,
+            "audio_base64": audio_base64
+        })
+    except Exception as e:
+        logger.exception(f"Error in get_pronunciation for word: {word}, lang: {lang}")
+        raise HTTPException(status_code=500, detail=str(e))

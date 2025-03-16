@@ -496,6 +496,43 @@ export default function App() {
     togglePause: togglePauseSession,
   };
 
+  // Inside the App component, add this function:
+  const handlePlayCorrectPronunciation = async () => {
+    try {
+      // Get the correct answer word
+      const correctAnswer = state.feedback?.correct_answer;
+      if (!correctAnswer) {
+        toast.error('No correct answer available');
+        return;
+      }
+      
+      // Determine which language to use for pronunciation
+      // If the prompt was in Hebrew, we need English pronunciation and vice versa
+      const promptLanguage = state.settings.promptLanguage;
+      const pronunciationLanguage = promptLanguage === 'en' ? 'iw' : 'en';
+      
+      // Fetch the pronunciation from the API
+      const pronunciationData = await api.getWordPronunciation(correctAnswer, pronunciationLanguage);
+      
+      if (pronunciationData && pronunciationData.audio_base64) {
+        // Create the audio source from the correct pronunciation
+        const audioSrc = `data:audio/wav;base64,${pronunciationData.audio_base64}`;
+        
+        // Play the audio
+        const audio = new Audio(audioSrc);
+        audio.play().catch(error => {
+          console.error('Error playing pronunciation:', error);
+          toast.error('Could not play pronunciation');
+        });
+      } else {
+        toast.error('No pronunciation available');
+      }
+    } catch (error) {
+      console.error('Error fetching pronunciation:', error);
+      toast.error('Failed to get pronunciation');
+    }
+  };
+
   return (
     <SessionProvider value={sessionContextValue}>
       <motion.div 
@@ -624,12 +661,14 @@ export default function App() {
                       exit={{ opacity: 0, y: -20 }}
                       transition={{ duration: 0.3 }}
                     >
-                      <FeedbackDisplay 
-                        feedback={state.feedback} 
-                        loading={state.loading}
-                        onNextWord={handleNextWord}
-                        sessionPaused={state.session.paused}
-                      />
+                    <FeedbackDisplay 
+                      feedback={state.feedback} 
+                      loading={state.loading}
+                      onNextWord={handleNextWord}
+                      sessionPaused={state.session.paused}
+                      onPlayCorrectPronunciation={handlePlayCorrectPronunciation}
+                    />
+
                     </motion.div>
                   )}
                 </AnimatePresence>

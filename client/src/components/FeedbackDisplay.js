@@ -1,9 +1,9 @@
 // src/components/FeedbackDisplay.js
 import React from 'react';
 import { motion } from 'framer-motion';
-import { BsCheckCircleFill, BsXCircleFill, BsArrowRightCircle, BsXCircle, BsMic } from 'react-icons/bs';
+import { BsCheckCircleFill, BsXCircleFill, BsArrowRightCircle, BsXCircle, BsMic, BsVolumeUp } from 'react-icons/bs';
 
-const FeedbackDisplay = ({ feedback, loading, onNextWord, sessionPaused }) => {
+const FeedbackDisplay = ({ feedback, loading, onNextWord, sessionPaused, onPlayCorrectPronunciation }) => {
   if (!feedback) return null;
   
   const isCorrect = feedback.is_correct;
@@ -36,7 +36,19 @@ const FeedbackDisplay = ({ feedback, loading, onNextWord, sessionPaused }) => {
         
         <div className="feedback-row">
           <span className="feedback-label">Correct answer:</span>
-          <span className="feedback-value">{feedback.correct_answer}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span className="feedback-value">{feedback.correct_answer}</span>
+            <motion.button
+              className="button circle secondary"
+              onClick={onPlayCorrectPronunciation}
+              disabled={loading || sessionPaused}
+              whileTap={{ scale: 0.95 }}
+              title="Play correct pronunciation"
+              style={{ minWidth: 'auto', padding: '0.25rem' }}
+            >
+              <BsVolumeUp size={16} />
+            </motion.button>
+          </div>
         </div>
         
         {feedback.pronunciation_score && (

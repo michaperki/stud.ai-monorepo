@@ -227,6 +227,15 @@ export function appReducer(state, action) {
             : state.stats.incorrectAttempts,
         },
       };
+
+    case 'UPDATE_FEEDBACK_AUDIO':
+      return {
+        ...state,
+        feedback: {
+          ...state.feedback,
+          correct_pronunciation_audio: action.payload
+        }
+      };
       
     default:
       return state;

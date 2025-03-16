@@ -162,4 +162,24 @@ export const saveSession = async (sessionData) => {
   }
 };
 
+/**
+ * Get pronunciation audio for a specific word
+ * @param {string} word - The word to get pronunciation for
+ * @param {string} lang - Language code ('iw' for Hebrew, 'en' for English)
+ * @returns {Promise<Object>} - Audio data with base64 encoded audio
+ */
+export const getWordPronunciation = async (word, lang = 'iw') => {
+  try {
+    const response = await api.get('/get_pronunciation', {
+      params: { 
+        word,
+        lang 
+      },
+    });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
 export default api;
