@@ -1,7 +1,8 @@
 // src/components/WordDisplay.js
-import React from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BsVolumeUp } from 'react-icons/bs';
+import { BsVolumeUp, BsInfoCircle } from 'react-icons/bs';
+import WordMetadata from './WordMetadata';
 
 const WordDisplay = ({ 
   word, 
@@ -9,8 +10,12 @@ const WordDisplay = ({
   onReplayTts, 
   loading, 
   sessionPaused,
-  hint
+  hint,
+  metadata,
+  onPlayCorrectPronunciation
 }) => {
+  const [showDetails, setShowDetails] = useState(false);
+  
   if (!word) return null;
   
   return (
@@ -24,17 +29,32 @@ const WordDisplay = ({
       <div className="word-display">
         <h2>{word}</h2>
         
-        {ttsAudio && (
-          <motion.button
-            className="button circle secondary"
-            onClick={onReplayTts}
-            disabled={loading || sessionPaused}
-            whileTap={{ scale: 0.95 }}
-            title="Replay pronunciation"
-          >
-            <BsVolumeUp size={20} />
-          </motion.button>
-        )}
+        <div className="word-display-controls">
+          {ttsAudio && (
+            <motion.button
+              className="button circle secondary"
+              onClick={onReplayTts}
+              disabled={loading || sessionPaused}
+              whileTap={{ scale: 0.95 }}
+              title="Replay pronunciation"
+            >
+              <BsVolumeUp size={20} />
+            </motion.button>
+          )}
+          
+          {metadata && (
+            <motion.button
+              className="button circle outline"
+              onClick={() => setShowDetails(!showDetails)}
+              disabled={loading || sessionPaused}
+              whileTap={{ scale: 0.95 }}
+              title={showDetails ? "Hide word details" : "Show word details"}
+              style={{ marginLeft: '0.5rem' }}
+            >
+              <BsInfoCircle size={20} />
+            </motion.button>
+          )}
+        </div>
       </div>
       
       <AnimatePresence>
@@ -48,6 +68,15 @@ const WordDisplay = ({
           >
             {hint}
           </motion.div>
+        )}
+      </AnimatePresence>
+      
+      <AnimatePresence>
+        {showDetails && metadata && (
+          <WordMetadata 
+            metadata={metadata} 
+            onPlayPronunciation={onPlayCorrectPronunciation}
+          />
         )}
       </AnimatePresence>
     </motion.div>

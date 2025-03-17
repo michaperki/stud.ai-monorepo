@@ -15,6 +15,8 @@ import MicrophoneErrorModal from './components/MicrophoneErrorModal';
 import MicrophoneDiagnostics from './components/MicrophoneDiagnostics';
 import NoMicControls from './components/NoMicControls';
 import AudioSettings from './components/AudioSettings';
+import VocabularySettings from './components/VocabularySettings';
+import WordMetadata from './components/WordMetadata';
 import useRecorder from './hooks/useRecorder';
 import { useTTS } from './hooks/useTTS';
 import * as api from './services/api';
@@ -277,10 +279,26 @@ export default function App() {
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
       const lang = state.settings.promptLanguage;
-      const data = await api.fetchNextWord(lang);
+      
+      // Use enhanced vocabulary options
+      const options = {
+        category: state.settings.wordCategory || undefined,
+        difficulty: state.settings.difficultyLevel || undefined,
+        exclude: state.history.length > 0 
+          ? state.history.slice(0, 5).map(item => item.word) 
+          : undefined
+      };
+      
+      const data = await api.fetchNextWordEnhanced(lang, options);
       const newWord = data.word;
       dispatch({ type: 'SET_WORD', payload: newWord });
       dispatch({ type: 'SET_TTS_AUDIO', payload: data.audio_base64 });
+      
+      // Store metadata if available
+      if (data.metadata) {
+        dispatch({ type: 'SET_WORD_METADATA', payload: data.metadata });
+      }
+      
       nextWordCalledRef.current = false; // Reset the guard once a new word is fetched.
       if (data.audio_base64) {
         const audioSrc = `data:audio/wav;base64,${data.audio_base64}`;
@@ -426,6 +444,22 @@ export default function App() {
     localStorage.setItem('appSettings', JSON.stringify(currentSettings));
   };
 
+  const handleVocabularySettings = (vocabSettings) => {
+    dispatch({ 
+      type: 'SET_SETTINGS', 
+      payload: {
+        wordCategory: vocabSettings.wordCategory,
+        difficultyLevel: vocabSettings.difficultyLevel
+      }
+    });
+    
+    // Get current settings and save the updated ones
+    const currentSettings = { ...state.settings };
+    currentSettings.wordCategory = vocabSettings.wordCategory;
+    currentSettings.difficultyLevel = vocabSettings.difficultyLevel;
+    localStorage.setItem('appSettings', JSON.stringify(currentSettings));
+  };
+
   useEffect(() => {
     const savedSettings = localStorage.getItem('appSettings');
     if (savedSettings) {
@@ -517,14 +551,16 @@ export default function App() {
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.3 }}
               >
-                <WordDisplay 
-                  word={state.currentWord} 
-                  ttsAudio={state.ttsAudio}
-                  onReplayTts={handleReplayTts}
-                  loading={state.loading}
-                  sessionPaused={state.session.paused}
-                  hint={state.hintText}
-                />
+              <WordDisplay 
+                word={state.currentWord} 
+                ttsAudio={state.ttsAudio}
+                onReplayTts={handleReplayTts}
+                loading={state.loading}
+                sessionPaused={state.session.paused}
+                hint={state.hintText}
+                metadata={state.wordMetadata}
+                onPlayCorrectPronunciation={handlePlayCorrectPronunciation}
+              />
                 
                 {stream && !state.practiceWithoutMic && (
                   <motion.div
@@ -580,14 +616,21 @@ export default function App() {
 
           <div className="app-sidebar">
             <HistoryDisplay history={state.history} />
-            <SettingsPanel
-              promptLanguage={state.settings.promptLanguage}
-              onChangeLanguage={handleChangeLanguage}
-              audioSettings={audioSettings}
-              onUpdateAudioSettings={handleUpdateAudioSettings}
-              autoAdvanceDelay={state.settings.autoAdvanceDelay}
-              onUpdateSettings={handleUpdateSettings}
-            />
+              <SettingsPanel
+                promptLanguage={state.settings.promptLanguage}
+                onChangeLanguage={handleChangeLanguage}
+                audioSettings={audioSettings}
+                onUpdateAudioSettings={handleUpdateAudioSettings}
+                autoAdvanceDelay={state.settings.autoAdvanceDelay}
+                onUpdateSettings={handleUpdateSettings}
+              />
+              <VocabularySettings
+                onUpdateSettings={handleVocabularySettings}
+                currentSettings={{
+                  wordCategory: state.settings.wordCategory,
+                  difficultyLevel: state.settings.difficultyLevel
+                }}
+              />
           </div>
         </main>
       </motion.div>

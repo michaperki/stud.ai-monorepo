@@ -42,12 +42,15 @@ export const initialState = {
     incorrectAttempts: 0,
   },
   settings: {
-    promptLanguage: 'en', // Hebrew (iw) by default, can also be 'en'
+    promptLanguage: 'en',
     silenceThreshold: 20,
     silenceDuration: 1500,
     autoPlayTTS: true,
-    autoAdvanceDelay: 5, // 5 seconds default, 0 means disabled
+    autoAdvanceDelay: 5,
+    wordCategory: '', // New setting for word category
+    difficultyLevel: '', // New setting for difficulty level
   },
+  wordMetadata: null, // Store metadata for the current word
 };
 
 // Reducer function
@@ -236,6 +239,11 @@ export function appReducer(state, action) {
           ...state.feedback,
           correct_pronunciation_audio: action.payload
         }
+      };
+    case 'SET_WORD_METADATA':
+      return {
+        ...state,
+        wordMetadata: action.payload
       };
       
     default:

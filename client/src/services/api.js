@@ -182,4 +182,76 @@ export const getWordPronunciation = async (word, lang = 'iw') => {
   }
 };
 
+/**
+ * Get all available word categories
+ * @returns {Promise<Object>} - List of vocabulary categories
+ */
+export const getVocabularyCategories = async () => {
+  try {
+    const response = await api.get('/vocabulary/categories');
+    return response.data;
+  } catch (error) {
+    console.warn('Failed to fetch vocabulary categories:', error);
+    return { categories: [] };
+  }
+};
+
+/**
+ * Get all available difficulty levels
+ * @returns {Promise<Object>} - List of vocabulary difficulty levels
+ */
+export const getVocabularyDifficultyLevels = async () => {
+  try {
+    const response = await api.get('/vocabulary/difficulty_levels');
+    return response.data;
+  } catch (error) {
+    console.warn('Failed to fetch vocabulary difficulty levels:', error);
+    return { difficulty_levels: [] };
+  }
+};
+
+/**
+ * Get vocabulary words with optional filters
+ * @param {Object} filters - Filters to apply
+ * @param {string} filters.category - Filter by word category
+ * @param {string} filters.difficulty - Filter by difficulty level
+ * @param {string} filters.search - Search by Hebrew or English text
+ * @param {number} filters.limit - Maximum number of words to return
+ * @returns {Promise<Object>} - Filtered vocabulary words
+ */
+export const getVocabulary = async (filters = {}) => {
+  try {
+    const response = await api.get('/vocabulary', { params: filters });
+    return response.data;
+  } catch (error) {
+    console.warn('Failed to fetch vocabulary:', error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch the next word to practice with enhanced filters
+ * @param {string} lang - Language code ('iw' for Hebrew, 'en' for English)
+ * @param {Object} options - Additional options
+ * @param {string} options.category - Filter by word category
+ * @param {string} options.difficulty - Filter by difficulty level
+ * @param {Array<string>} options.exclude - Words to exclude
+ * @returns {Promise<Object>} - Word data with audio and metadata
+ */
+export const fetchNextWordEnhanced = async (lang = 'iw', options = {}) => {
+  try {
+    const params = { 
+      lang,
+      ...(options.category && { category: options.category }),
+      ...(options.difficulty && { difficulty: options.difficulty }),
+      ...(options.exclude && { exclude: options.exclude.join(',') })
+    };
+    
+    const response = await api.get('/next_word', { params });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
 export default api;
