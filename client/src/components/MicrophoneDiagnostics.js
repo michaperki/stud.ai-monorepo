@@ -58,7 +58,7 @@ const MicrophoneDiagnostics = ({ onClose }) => {
         testStream.getTracks().forEach(track => track.stop());
       }
     };
-  }, []);
+  }, [testStream]);
   
   // Log errors for diagnostics
   const logError = (message, error) => {

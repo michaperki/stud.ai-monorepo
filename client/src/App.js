@@ -3,7 +3,7 @@
 import React, { useReducer, useEffect, useRef, useCallback, useState } from 'react';
 import { Toaster, toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
-import AudioVisualizer from './components/AudioVisualizer';
+// import AudioVisualizer from './components/AudioVisualizer';
 import SimpleAudioVisualizer from './components/SimpleAudioVisualizer';
 import StatusIndicator from './components/StatusIndicator';
 import FeedbackDisplay from './components/FeedbackDisplay';
@@ -14,13 +14,11 @@ import WordDisplay from './components/WordDisplay';
 import MicrophoneErrorModal from './components/MicrophoneErrorModal';
 import MicrophoneDiagnostics from './components/MicrophoneDiagnostics';
 import NoMicControls from './components/NoMicControls';
-import AudioSettings from './components/AudioSettings';
 import VocabularySettings from './components/VocabularySettings';
-import WordMetadata from './components/WordMetadata';
 import useRecorder from './hooks/useRecorder';
 import { useTTS } from './hooks/useTTS';
 import * as api from './services/api';
-import { checkBrowserSupport, checkAudioDevices } from './utils/microphoneUtils';
+import { checkBrowserSupport } from './utils/microphoneUtils';
 import './App.css';
 import { appReducer, initialState } from './reducers/appReducer';
 import { SessionProvider } from './contexts/SessionContext';
@@ -29,7 +27,6 @@ import { BsMic, BsMicMute } from 'react-icons/bs';
 export default function App() {
   // Ref to guard against duplicate next word calls.
   const nextWordCalledRef = useRef(false);
-  
   const [state, dispatch] = useReducer(appReducer, initialState);
   const { playTTS } = useTTS();
   const [showDiagnostics, setShowDiagnostics] = useState(false);
@@ -42,6 +39,13 @@ export default function App() {
     console.log('Updating audio settings:', newSettings);
     localStorage.setItem('audioSettings', JSON.stringify(newSettings));
   };
+
+  const handleApiError = useCallback((error, message) => {
+    console.error('API Error:', error);
+    const errorMessage = error.response?.data?.detail || message || 'Server error';
+    dispatch({ type: 'SET_ERROR', payload: errorMessage });
+    toast.error(errorMessage);
+  }, [dispatch]);
 
   const handleMicrophoneError = useCallback((error) => {
     console.log('Microphone error detected:', error.message);
@@ -81,123 +85,8 @@ export default function App() {
       toast.error(error.message || 'Microphone error. Please check your settings.');
     }
   }, [dispatch]);
-      
-  const { 
-    isRecording, 
-    startRecording, 
-    stopRecording, 
-    stream, 
-    microphoneAvailable, 
-    retryMicrophoneAccess,
-    audioSettings
-  } = useRecorder(handleRecordingComplete, handleMicrophoneError);
 
-  useEffect(() => {
-    const checkSupport = async () => {
-      const browserSupport = checkBrowserSupport();
-      console.log('Browser audio support:', browserSupport);
-      if (!browserSupport.mediaDevices || !browserSupport.getUserMedia) {
-        toast.error('Your browser may not fully support audio recording. Consider trying a different browser.');
-      }
-    };
-    checkSupport();
-  }, []);
-
-  useEffect(() => {
-    const handleRetry = () => {
-      if (state.currentWord) {
-        dispatch({ type: 'SET_RECORDING_STATE', payload: 'idle' });
-        handleReplayTts();
-      }
-    };
-    window.addEventListener('retry-pronunciation', handleRetry);
-    return () => window.removeEventListener('retry-pronunciation', handleRetry);
-  }, [state.currentWord]);
-  
-  const handleCloseErrorModal = useCallback(() => {
-    if (retryMicrophoneAccess) {
-      retryMicrophoneAccess().catch(err => {
-        console.warn("Retry microphone access failed:", err);
-      });
-    }
-    dispatch({ 
-      type: 'SET_MICROPHONE_ERROR', 
-      payload: { isOpen: false } 
-    });
-    setShowDiagnostics(false);
-  }, [retryMicrophoneAccess]);
-
-  const handleContinueWithoutMic = useCallback(() => {
-    dispatch({ type: 'SET_PRACTICE_WITHOUT_MIC', payload: true });
-    dispatch({ type: 'SET_MICROPHONE_ERROR', payload: { isOpen: false } });
-    setShowDiagnostics(false);
-    if (state.session.active && !state.session.paused) {
-      handleGetWordWithoutMic();
-    }
-  }, [state.session.active, state.session.paused]);
-
-  useEffect(() => {
-    sessionPausedRef.current = state.session.paused;
-  }, [state.session.paused]);
-
-  useEffect(() => {
-    if (isRecording) {
-      dispatch({ type: 'SET_RECORDING_STATE', payload: 'recording' });
-    }
-  }, [isRecording]);
-
-  useEffect(() => {
-    if (state.session.active && !state.session.paused) {
-      sessionTimerRef.current = setInterval(() => 
-        dispatch({ type: 'INCREMENT_SESSION_TIME' }), 1000);
-    } else {
-      clearInterval(sessionTimerRef.current);
-    }
-    return () => clearInterval(sessionTimerRef.current);
-  }, [state.session.active, state.session.paused]);
-
-  const handleApiError = (error, message) => {
-    console.error('API Error:', error);
-    const errorMessage = error.response?.data?.detail || message || 'Server error';
-    dispatch({ type: 'SET_ERROR', payload: errorMessage });
-    toast.error(errorMessage);
-  };
-
-  const handleOpenDiagnostics = useCallback(() => {
-    dispatch({ 
-      type: 'SET_MICROPHONE_ERROR', 
-      payload: { 
-        isOpen: true, 
-        message: 'Test your microphone before starting a session.',
-        isCritical: false
-      }
-    });
-    setShowDiagnostics(true);
-  }, []);
-
-  const handleGetWordWithoutMic = async () => {
-    if (state.session.paused) return;
-    dispatch({ type: 'SET_LOADING', payload: true });
-    try {
-      const lang = state.settings.promptLanguage;
-      const data = await api.fetchNextWord(lang);
-      const newWord = data.word;
-      dispatch({ type: 'SET_WORD', payload: newWord });
-      dispatch({ type: 'SET_TTS_AUDIO', payload: data.audio_base64 });
-      nextWordCalledRef.current = false; // Reset the guard.
-      if (data.audio_base64) {
-        const audioSrc = `data:audio/wav;base64,${data.audio_base64}`;
-        playTTS(audioSrc);
-      }
-      dispatch({ type: 'SET_RECORDING_STATE', payload: 'no-mic-mode' });
-    } catch (error) {
-      handleApiError(error, 'Failed to fetch word');
-    } finally {
-      dispatch({ type: 'SET_LOADING', payload: false });
-    }
-  };
-
-  async function handleRecordingComplete(audioBlob, word) {
+  const handleRecordingComplete = useCallback(async (audioBlob, word) => {
     if (!audioBlob || audioBlob.size === 0) {
       console.warn('Empty audio blob received - skipping processing');
       dispatch({ type: 'SET_RECORDING_STATE', payload: 'idle' });
@@ -233,43 +122,125 @@ export default function App() {
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
     }
-  }
+  }, [handleApiError, dispatch]);
 
-  const handleManualFeedback = (isCorrect) => {
-    const feedbackData = {
-      user_response: state.currentWord,
-      is_correct: isCorrect,
-      correct_answer: state.currentWord,
-      pronunciation_score: isCorrect ? 90 : 45
+  const {
+    isRecording, 
+    startRecording, 
+    stopRecording, 
+    stream, 
+    microphoneAvailable, 
+    retryMicrophoneAccess,
+    audioSettings
+  } = useRecorder(handleRecordingComplete, handleMicrophoneError);
+
+  useEffect(() => {
+    const checkSupport = async () => {
+      const browserSupport = checkBrowserSupport();
+      console.log('Browser audio support:', browserSupport);
+      if (!browserSupport.mediaDevices || !browserSupport.getUserMedia) {
+        toast.error('Your browser may not fully support audio recording. Consider trying a different browser.');
+      }
     };
-    dispatch({
-      type: 'ADD_HISTORY',
-      payload: {
-        word: state.currentWord,
-        userResponse: state.currentWord,
-        isCorrect,
-        timestamp: new Date().toISOString(),
-      },
-    });
-    dispatch({
-      type: 'UPDATE_STATS',
-      payload: { isCorrect, word: state.currentWord },
-    });
-    dispatch({ type: 'SET_FEEDBACK', payload: feedbackData });
-    if (!isCorrect) {
-      dispatch({ type: 'INCREMENT_ATTEMPTS' });
-    }
-    const soundFile = isCorrect ? '/correct.mp3' : '/incorrect.mp3';
-    const feedbackAudio = new Audio(soundFile);
-    feedbackAudio.play();
-    if (!sessionPausedRef.current && isCorrect) {
-      feedbackAudio.onended = () => {
-        handleNextWord();
-      };
-    }
-  };
+    checkSupport();
+  }, []);
 
-  // Fetch and play the next word (with microphone mode)
+  const handleReplayTts = useCallback(() => {
+    if (!state.ttsAudio) return;
+    const audioSrc = `data:audio/wav;base64,${state.ttsAudio}`;
+    playTTS(audioSrc, () => {
+      if (!sessionPausedRef.current) {
+        if (state.practiceWithoutMic) {
+          dispatch({ type: 'SET_RECORDING_STATE', payload: 'no-mic-mode' });
+        } else {
+          startRecording(state.currentWord).catch(error => {
+            console.error("Failed to start recording:", error);
+            if (error.name === 'NotFoundError' || error.name === 'NotAllowedError' || error.name === 'NotReadableError') {
+              handleMicrophoneError(error);
+            } else {
+              toast.error("Could not access microphone. Please check your microphone permissions.");
+            }
+            dispatch({ type: 'SET_RECORDING_STATE', payload: 'idle' });
+          });
+        }
+      }
+    });
+  }, [state.ttsAudio, state.practiceWithoutMic, state.currentWord, playTTS, startRecording, handleMicrophoneError, dispatch]);
+
+  const handleGetWordWithoutMic = useCallback(async () => {
+    if (state.session.paused) return;
+    dispatch({ type: 'SET_LOADING', payload: true });
+    try {
+      const lang = state.settings.promptLanguage;
+      const data = await api.fetchNextWord(lang);
+      const newWord = data.word;
+      dispatch({ type: 'SET_WORD', payload: newWord });
+      dispatch({ type: 'SET_TTS_AUDIO', payload: data.audio_base64 });
+      nextWordCalledRef.current = false; // Reset the guard.
+      if (data.audio_base64) {
+        const audioSrc = `data:audio/wav;base64,${data.audio_base64}`;
+        playTTS(audioSrc);
+      }
+      dispatch({ type: 'SET_RECORDING_STATE', payload: 'no-mic-mode' });
+    } catch (error) {
+      handleApiError(error, 'Failed to fetch word');
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: false });
+    }
+  }, [state.session.paused, state.settings.promptLanguage, playTTS, dispatch, handleApiError]);
+
+  const handleContinueWithoutMic = useCallback(() => {
+    dispatch({ type: 'SET_PRACTICE_WITHOUT_MIC', payload: true });
+    dispatch({ type: 'SET_MICROPHONE_ERROR', payload: { isOpen: false } });
+    setShowDiagnostics(false);
+    if (state.session.active && !state.session.paused) {
+      handleGetWordWithoutMic();
+    }
+  }, [state.session.active, state.session.paused, dispatch, handleGetWordWithoutMic]);
+
+  useEffect(() => {
+    sessionPausedRef.current = state.session.paused;
+  }, [state.session.paused]);
+
+  useEffect(() => {
+    if (isRecording) {
+      dispatch({ type: 'SET_RECORDING_STATE', payload: 'recording' });
+    }
+  }, [isRecording, dispatch]);
+
+  useEffect(() => {
+    if (state.session.active && !state.session.paused) {
+      sessionTimerRef.current = setInterval(() => 
+        dispatch({ type: 'INCREMENT_SESSION_TIME' }), 1000);
+    } else {
+      clearInterval(sessionTimerRef.current);
+    }
+    return () => clearInterval(sessionTimerRef.current);
+  }, [state.session.active, state.session.paused, dispatch]);
+
+  useEffect(() => {
+    const handleRetry = () => {
+      if (state.currentWord) {
+        dispatch({ type: 'SET_RECORDING_STATE', payload: 'idle' });
+        handleReplayTts();
+      }
+    };
+    window.addEventListener('retry-pronunciation', handleRetry);
+    return () => window.removeEventListener('retry-pronunciation', handleRetry);
+  }, [state.currentWord, handleReplayTts, dispatch]);
+
+  const handleOpenDiagnostics = useCallback(() => {
+    dispatch({ 
+      type: 'SET_MICROPHONE_ERROR', 
+      payload: { 
+        isOpen: true, 
+        message: 'Test your microphone before starting a session.',
+        isCritical: false
+      }
+    });
+    setShowDiagnostics(true);
+  }, [dispatch]);
+
   const handleGetWord = async () => {
     if (state.practiceWithoutMic) {
       handleGetWordWithoutMic();
@@ -279,8 +250,6 @@ export default function App() {
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
       const lang = state.settings.promptLanguage;
-      
-      // Use enhanced vocabulary options
       const options = {
         category: state.settings.wordCategory || undefined,
         difficulty: state.settings.difficultyLevel || undefined,
@@ -293,31 +262,23 @@ export default function App() {
       const newWord = data.word;
       dispatch({ type: 'SET_WORD', payload: newWord });
       dispatch({ type: 'SET_TTS_AUDIO', payload: data.audio_base64 });
-      
-      // Store metadata if available
       if (data.metadata) {
         dispatch({ type: 'SET_WORD_METADATA', payload: data.metadata });
       }
-      
-      nextWordCalledRef.current = false; // Reset the guard once a new word is fetched.
+      nextWordCalledRef.current = false;
       if (data.audio_base64) {
         const audioSrc = `data:audio/wav;base64,${data.audio_base64}`;
         playTTS(audioSrc, () => {
           if (!sessionPausedRef.current) {
-            try {
-              startRecording(newWord).catch(error => {
-                console.error("Failed to start recording:", error);
-                if (error.name === 'NotFoundError' || error.name === 'NotAllowedError' || error.name === 'NotReadableError') {
-                  handleMicrophoneError(error);
-                } else {
-                  toast.error("Could not access microphone. Please check your microphone permissions.");
-                }
-                dispatch({ type: 'SET_RECORDING_STATE', payload: 'idle' });
-              });
-            } catch (error) {
-              console.error("Exception starting recording:", error);
-              handleMicrophoneError(error);
-            }
+            startRecording(newWord).catch(error => {
+              console.error("Failed to start recording:", error);
+              if (error.name === 'NotFoundError' || error.name === 'NotAllowedError' || error.name === 'NotReadableError') {
+                handleMicrophoneError(error);
+              } else {
+                toast.error("Could not access microphone. Please check your microphone permissions.");
+              }
+              dispatch({ type: 'SET_RECORDING_STATE', payload: 'idle' });
+            });
           }
         });
       }
@@ -328,7 +289,6 @@ export default function App() {
     }
   };
 
-  // Begin a new session
   const handleStartSession = async () => {
     dispatch({ type: 'START_SESSION' });
     if (microphoneAvailable === false) {
@@ -354,33 +314,6 @@ export default function App() {
     } else {
       dispatch({ type: 'PAUSE_SESSION' });
     }
-  };
-
-  const handleReplayTts = () => {
-    if (!state.ttsAudio) return;
-    const audioSrc = `data:audio/wav;base64,${state.ttsAudio}`;
-    playTTS(audioSrc, () => {
-      if (!sessionPausedRef.current) {
-        if (state.practiceWithoutMic) {
-          dispatch({ type: 'SET_RECORDING_STATE', payload: 'no-mic-mode' });
-        } else {
-          try {
-            startRecording(state.currentWord).catch(error => {
-              console.error("Failed to start recording:", error);
-              if (error.name === 'NotFoundError' || error.name === 'NotAllowedError' || error.name === 'NotReadableError') {
-                handleMicrophoneError(error);
-              } else {
-                toast.error("Could not access microphone. Please check your microphone permissions.");
-              }
-              dispatch({ type: 'SET_RECORDING_STATE', payload: 'idle' });
-            });
-          } catch (error) {
-            console.error("Exception starting recording:", error);
-            handleMicrophoneError(error);
-          }
-        }
-      }
-    });
   };
 
   // Move to the next word (guarded against duplicates)
@@ -452,11 +385,7 @@ export default function App() {
         difficultyLevel: vocabSettings.difficultyLevel
       }
     });
-    
-    // Get current settings and save the updated ones
-    const currentSettings = { ...state.settings };
-    currentSettings.wordCategory = vocabSettings.wordCategory;
-    currentSettings.difficultyLevel = vocabSettings.difficultyLevel;
+    const currentSettings = { ...state.settings, ...vocabSettings };
     localStorage.setItem('appSettings', JSON.stringify(currentSettings));
   };
 
@@ -551,17 +480,17 @@ export default function App() {
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.3 }}
               >
-              <WordDisplay 
-                word={state.currentWord} 
-                ttsAudio={state.ttsAudio}
-                onReplayTts={handleReplayTts}
-                loading={state.loading}
-                sessionPaused={state.session.paused}
-                hint={state.hintText}
-                metadata={state.wordMetadata}
-                onPlayCorrectPronunciation={handlePlayCorrectPronunciation}
-              />
-                
+                <WordDisplay 
+                  word={state.currentWord} 
+                  ttsAudio={state.ttsAudio}
+                  onReplayTts={handleReplayTts}
+                  loading={state.loading}
+                  sessionPaused={state.session.paused}
+                  hint={state.hintText}
+                  metadata={state.wordMetadata}
+                  onPlayCorrectPronunciation={handlePlayCorrectPronunciation}
+                />
+                  
                 {stream && !state.practiceWithoutMic && (
                   <motion.div
                     initial={{ opacity: 0, scale: 0.9 }}
@@ -578,7 +507,7 @@ export default function App() {
                     />
                   </motion.div>
                 )}
-                
+                  
                 {state.practiceWithoutMic && state.recordingState === 'no-mic-mode' && !state.feedback && (
                   <NoMicControls
                     onCorrect={() => handleManualFeedback(true)}
@@ -588,9 +517,9 @@ export default function App() {
                     sessionPaused={state.session.paused}
                   />
                 )}
-                
+                  
                 <StatusIndicator recordingState={state.recordingState} />
-                
+                  
                 <AnimatePresence>
                   {state.feedback && (
                     <motion.div
@@ -616,21 +545,21 @@ export default function App() {
 
           <div className="app-sidebar">
             <HistoryDisplay history={state.history} />
-              <SettingsPanel
-                promptLanguage={state.settings.promptLanguage}
-                onChangeLanguage={handleChangeLanguage}
-                audioSettings={audioSettings}
-                onUpdateAudioSettings={handleUpdateAudioSettings}
-                autoAdvanceDelay={state.settings.autoAdvanceDelay}
-                onUpdateSettings={handleUpdateSettings}
-              />
-              <VocabularySettings
-                onUpdateSettings={handleVocabularySettings}
-                currentSettings={{
-                  wordCategory: state.settings.wordCategory,
-                  difficultyLevel: state.settings.difficultyLevel
-                }}
-              />
+            <SettingsPanel
+              promptLanguage={state.settings.promptLanguage}
+              onChangeLanguage={handleChangeLanguage}
+              audioSettings={audioSettings}
+              onUpdateAudioSettings={handleUpdateAudioSettings}
+              autoAdvanceDelay={state.settings.autoAdvanceDelay}
+              onUpdateSettings={handleUpdateSettings}
+            />
+            <VocabularySettings
+              onUpdateSettings={handleVocabularySettings}
+              currentSettings={{
+                wordCategory: state.settings.wordCategory,
+                difficultyLevel: state.settings.difficultyLevel
+              }}
+            />
           </div>
         </main>
       </motion.div>

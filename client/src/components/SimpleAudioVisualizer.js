@@ -122,7 +122,7 @@ const SimpleAudioVisualizer = ({
       source.disconnect();
       audioCtx.close();
     };
-  }, [stream, onSilenceDetected, silenceThreshold, silenceDuration, minRecordingTime, maxRecordingTime]);
+  }, [stream, onSilenceDetected, silenceThreshold, silenceDuration, minRecordingTime, maxRecordingTime, isListeningForSilence]);
   
   return (
     <div className="audio-visualizer-container">

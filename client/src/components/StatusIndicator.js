@@ -1,7 +1,7 @@
 // src/components/StatusIndicator.js
 import React from 'react';
 import { motion } from 'framer-motion';
-import { BsMic, BsStopCircle, BsCheckCircle, BsMicMute } from 'react-icons/bs';
+import { BsMic, BsCheckCircle, BsMicMute } from 'react-icons/bs';
 
 const StatusIndicator = ({ recordingState }) => {
   // Different configurations based on state

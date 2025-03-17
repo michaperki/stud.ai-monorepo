@@ -114,7 +114,6 @@ export const checkAudioDevices = async () => {
  */
 export const testMicrophone = async (deviceId = null) => {
   let testStream = null;
-  let recorder = null;
   let audioContext = null;
   
   try {

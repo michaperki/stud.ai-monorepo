@@ -491,7 +491,7 @@ const useRecorder = (onRecordingComplete, onMicrophoneError) => {
       // so we just need to throw the error here
       throw error;
     }
-  }, [onRecordingComplete, onMicrophoneError, stream, microphoneAvailable, cleanupMediaResources, stopRecording, audioSettings]);
+  }, [onRecordingComplete, onMicrophoneError, microphoneAvailable, cleanupMediaResources, stopRecording, audioSettings]);
 
   // Cancel recording and discard data
   const cancelRecording = useCallback(() => {
