@@ -210,7 +210,7 @@ async def get_vocabulary_stats():
         logger.exception("Error in get_vocabulary_stats")
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/check_answer/{word}")
+@router.post("/check_answer/{word:path}")
 async def check_answer(word: str, file: UploadFile = File(...)):
     try:
         # Save audio file

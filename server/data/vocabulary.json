@@ -1,0 +1,627 @@
+
+[
+  {
+    "hebrew": "אִישׁ",
+    "english": "man",
+    "category": "noun",
+    "difficulty": "beginner",
+    "tags": [],
+    "notes": "",
+    "pronunciation_guide": "eesh",
+    "example_sentence": {
+      "hebrew": "הָאִישׁ קוֹרֵא סֵפֶר",
+      "english": "The man is reading a book"
+    }
+  },
+  {
+    "hebrew": "אִשָּׁה",
+    "english": "woman",
+    "category": "noun",
+    "difficulty": "beginner",
+    "tags": [],
+    "notes": "",
+    "pronunciation_guide": "ee-shah",
+    "example_sentence": {
+      "hebrew": "הָאִשָּׁה עוֹבֶדֶת בַּמִּשְׂרָד",
+      "english": "The woman works in the office"
+    }
+  },
+  {
+    "hebrew": "יֶלֶד",
+    "english": "boy",
+    "category": "noun",
+    "difficulty": "beginner",
+    "tags": [],
+    "notes": "",
+    "pronunciation_guide": "ye-led",
+    "example_sentence": {
+      "hebrew": "הַיֶּלֶד שׁוֹתֶה חָלָב",
+      "english": "The boy is drinking milk"
+    }
+  },
+  {
+    "hebrew": "יַלְדָה",
+    "english": "girl",
+    "category": "noun",
+    "difficulty": "beginner",
+    "tags": [],
+    "notes": "",
+    "pronunciation_guide": "yal-dah",
+    "example_sentence": {
+      "hebrew": "הַיַּלְדָה מְשַׂחֶקֶת בַּגַּן",
+      "english": "The girl is playing in the garden"
+    }
+  },
+  {
+    "hebrew": "בַּיִת",
+    "english": "house/home",
+    "category": "noun",
+    "difficulty": "beginner",
+    "tags": [],
+    "notes": "",
+    "pronunciation_guide": "ba-yit",
+    "example_sentence": {
+      "hebrew": "הַבַּיִת גָּדוֹל וְיָפֶה",
+      "english": "The house is big and beautiful"
+    }
+  },
+  {
+    "hebrew": "כִּסֵּא",
+    "english": "chair",
+    "category": "noun",
+    "difficulty": "beginner",
+    "tags": [],
+    "notes": "",
+    "pronunciation_guide": "ki-seh",
+    "example_sentence": {
+      "hebrew": "הַכִּסֵּא נִוחַ",
+      "english": "The chair is comfortable"
+    }
+  },
+  {
+    "hebrew": "שֻׁלְחָן",
+    "english": "table",
+    "category": "noun",
+    "difficulty": "beginner",
+    "tags": [],
+    "notes": "",
+    "pronunciation_guide": "shool-chan",
+    "example_sentence": {
+      "hebrew": "השֻׁלְחָן עַל הַמִּזְרָח",
+      "english": "The table is on the east side"
+    }
+  },
+  {
+    "hebrew": "מְכוֹנִית",
+    "english": "car",
+    "category": "noun",
+    "difficulty": "beginner",
+    "tags": [],
+    "notes": "",
+    "pronunciation_guide": "me-kho-nit",
+    "example_sentence": {
+      "hebrew": "המְכוֹנִית חֲדָשָׁה",
+      "english": "The car is new"
+    }
+  },
+  {
+    "hebrew": "אוֹטוֹבּוּס",
+    "english": "bus",
+    "category": "noun",
+    "difficulty": "beginner",
+    "tags": [],
+    "notes": "",
+    "pronunciation_guide": "o-to-bus",
+    "example_sentence": {
+      "hebrew": "האוטובוס מגיע בזמן",
+      "english": "The bus arrives on time"
+    }
+  },
+  {
+    "hebrew": "מֶלֶךְ",
+    "english": "king",
+    "category": "noun",
+    "difficulty": "intermediate",
+    "tags": [],
+    "notes": "",
+    "pronunciation_guide": "meh-lekh",
+    "example_sentence": {
+      "hebrew": "הַמֶּלֶךְ מוֹשֵׁל בַּמְּדִינָה",
+      "english": "The king rules the country"
+    }
+  },
+  {
+    "hebrew": "מַלְכָּה",
+    "english": "queen",
+    "category": "noun",
+    "difficulty": "intermediate",
+    "tags": [],
+    "notes": "",
+    "pronunciation_guide": "mal-kah",
+    "example_sentence": {
+      "hebrew": "הַמַלְכָּה חָכְמָה",
+      "english": "The queen is wise"
+    }
+  },
+  {
+    "hebrew": "סֵפֶר",
+    "english": "book",
+    "category": "noun",
+    "difficulty": "beginner",
+    "tags": [],
+    "notes": "",
+    "pronunciation_guide": "seh-fer",
+    "example_sentence": {
+      "hebrew": "הַסֵּפֶר מְעֻנֶן",
+      "english": "The book is interesting"
+    }
+  },
+  {
+    "hebrew": "לָלֶכֶת",
+    "english": "to go",
+    "category": "verb",
+    "difficulty": "beginner",
+    "tags": [],
+    "notes": "Infinitive form",
+    "pronunciation_guide": "la-le-khet",
+    "example_sentence": {
+      "hebrew": "אֲנִי לָלֶכֶת לְבַיִת הַסֵּפֶר",
+      "english": "I am going to the library"
+    }
+  },
+  {
+    "hebrew": "לִכְתוֹב",
+    "english": "to write",
+    "category": "verb",
+    "difficulty": "beginner",
+    "tags": [],
+    "notes": "Infinitive form",
+    "pronunciation_guide": "lich-tohv",
+    "example_sentence": {
+      "hebrew": "הַתַלְמִיד מְלִכְתוֹב סִפּוּר",
+      "english": "The student is writing a story"
+    }
+  },
+  {
+    "hebrew": "לִקְרוֹא",
+    "english": "to read",
+    "category": "verb",
+    "difficulty": "beginner",
+    "tags": [],
+    "notes": "Infinitive form",
+    "pronunciation_guide": "lik-roh",
+    "example_sentence": {
+      "hebrew": "אֲנִי לִקְרוֹא עוֹד סֵפֶר",
+      "english": "I am reading another book"
+    }
+  },
+  {
+    "hebrew": "לְשַׁחֵק",
+    "english": "to play",
+    "category": "verb",
+    "difficulty": "beginner",
+    "tags": [],
+    "notes": "Infinitive form",
+    "pronunciation_guide": "lesh-chahek",
+    "example_sentence": {
+      "hebrew": "הַיֶּלֶד לְשַׁחֵק בַּחָצֵר",
+      "english": "The boy is playing in the yard"
+    }
+  },
+  {
+    "hebrew": "גָּדוֹל",
+    "english": "big",
+    "category": "adjective",
+    "difficulty": "beginner",
+    "tags": ["size"],
+    "notes": "",
+    "pronunciation_guide": "ga-dol",
+    "example_sentence": {
+      "hebrew": "הַכֶּלֶב גָּדוֹל",
+      "english": "The dog is big"
+    }
+  },
+  {
+    "hebrew": "קָטָן",
+    "english": "small",
+    "category": "adjective",
+    "difficulty": "beginner",
+    "tags": ["size"],
+    "notes": "",
+    "pronunciation_guide": "ka-tan",
+    "example_sentence": {
+      "hebrew": "הַחֲתוּל קָטָן",
+      "english": "The cat is small"
+    }
+  },
+  {
+    "hebrew": "חָדָשׁ",
+    "english": "new",
+    "category": "adjective",
+    "difficulty": "beginner",
+    "tags": [],
+    "notes": "",
+    "pronunciation_guide": "kha-dash",
+    "example_sentence": {
+      "hebrew": "זֶה סֵפֶר חָדָשׁ",
+      "english": "This is a new book"
+    }
+  },
+  {
+    "hebrew": "יָשָׁן",
+    "english": "old",
+    "category": "adjective",
+    "difficulty": "beginner",
+    "tags": [],
+    "notes": "",
+    "pronunciation_guide": "ya-shan",
+    "example_sentence": {
+      "hebrew": "זֶה רָדִיוֹ יָשָׁן",
+      "english": "This is an old radio"
+    }
+  },
+  {
+    "hebrew": "יָפֶה",
+    "english": "beautiful",
+    "category": "adjective",
+    "difficulty": "beginner",
+    "tags": ["appearance"],
+    "notes": "",
+    "pronunciation_guide": "ya-feh",
+    "example_sentence": {
+      "hebrew": "הַנַּעֲרָה יָפָה",
+      "english": "The girl is beautiful"
+    }
+  },
+  {
+    "hebrew": "קָשֶׁה",
+    "english": "difficult",
+    "category": "adjective",
+    "difficulty": "intermediate",
+    "tags": ["challenge"],
+    "notes": "",
+    "pronunciation_guide": "ka-sheh",
+    "example_sentence": {
+      "hebrew": "הַמִּשְׁבָּח קָשֶׁה",
+      "english": "The problem is difficult"
+    }
+  },
+  {
+    "hebrew": "אֲנִי",
+    "english": "I",
+    "category": "pronoun",
+    "difficulty": "beginner",
+    "tags": [],
+    "notes": "",
+    "pronunciation_guide": "ah-nee",
+    "example_sentence": {
+      "hebrew": "אֲנִי מְלַמֵּד",
+      "english": "I am teaching"
+    }
+  },
+  {
+    "hebrew": "אַתָּה",
+    "english": "you (masculine)",
+    "category": "pronoun",
+    "difficulty": "beginner",
+    "tags": [],
+    "notes": "",
+    "pronunciation_guide": "ah-ta",
+    "example_sentence": {
+      "hebrew": "אַתָּה חָכָם",
+      "english": "You are wise"
+    }
+  },
+  {
+    "hebrew": "הוּא",
+    "english": "he",
+    "category": "pronoun",
+    "difficulty": "beginner",
+    "tags": [],
+    "notes": "",
+    "pronunciation_guide": "hoo",
+    "example_sentence": {
+      "hebrew": "הוּא מְדַבֵּר",
+      "english": "He is speaking"
+    }
+  },
+  {
+    "hebrew": "הִיא",
+    "english": "she",
+    "category": "pronoun",
+    "difficulty": "beginner",
+    "tags": [],
+    "notes": "",
+    "pronunciation_guide": "hee",
+    "example_sentence": {
+      "hebrew": "הִיא רוֹצָה",
+      "english": "She wants"
+    }
+  },
+  {
+    "hebrew": "מְהֵר",
+    "english": "quickly",
+    "category": "adverb",
+    "difficulty": "beginner",
+    "tags": [],
+    "notes": "",
+    "pronunciation_guide": "meh-her",
+    "example_sentence": {
+      "hebrew": "הוּא רָץ מְהֵר",
+      "english": "He runs quickly"
+    }
+  },
+  {
+    "hebrew": "אִיטִי",
+    "english": "slowly",
+    "category": "adverb",
+    "difficulty": "beginner",
+    "tags": [],
+    "notes": "",
+    "pronunciation_guide": "ee-tee",
+    "example_sentence": {
+      "hebrew": "הַמְּכוֹנִית נִסָּעָה אִיטִי",
+      "english": "The car moved slowly"
+    }
+  },
+  {
+    "hebrew": "בְּ",
+    "english": "in",
+    "category": "preposition",
+    "difficulty": "beginner",
+    "tags": [],
+    "notes": "Often used as a prefix",
+    "pronunciation_guide": "beh",
+    "example_sentence": {
+      "hebrew": "בְּבַיִת",
+      "english": "Inside the house"
+    }
+  },
+  {
+    "hebrew": "עַל",
+    "english": "on",
+    "category": "preposition",
+    "difficulty": "beginner",
+    "tags": [],
+    "notes": "",
+    "pronunciation_guide": "al",
+    "example_sentence": {
+      "hebrew": "הַסֵּפֶר עַל הַשֻּׁלְחָן",
+      "english": "The book is on the table"
+    }
+  },
+  {
+    "hebrew": "לְ",
+    "english": "to",
+    "category": "preposition",
+    "difficulty": "beginner",
+    "tags": [],
+    "notes": "Can be used as a prefix",
+    "pronunciation_guide": "leh",
+    "example_sentence": {
+      "hebrew": "לְמִשְׁכָּן",
+      "english": "To the residence"
+    }
+  },
+  {
+    "hebrew": "מַה נִשְׁמַע",
+    "english": "What's up?",
+    "category": "phrase",
+    "difficulty": "beginner",
+    "tags": [],
+    "notes": "",
+    "pronunciation_guide": "mah nish-mah",
+    "example_sentence": {
+      "hebrew": "מַה נִשְׁמַע, חֲבֵר?",
+      "english": "What's up, friend?"
+    }
+  },
+  {
+    "hebrew": "בְּבַקָּשָׁה",
+    "english": "please/you're welcome",
+    "category": "phrase",
+    "difficulty": "beginner",
+    "tags": [],
+    "notes": "",
+    "pronunciation_guide": "be-va-ka-shah",
+    "example_sentence": {
+      "hebrew": "תּוֹדָה, בְּבַקָּשָׁה",
+      "english": "Thank you, you're welcome"
+    }
+  },
+  {
+    "hebrew": "לְהִתְרָאוֹת",
+    "english": "goodbye/see you",
+    "category": "phrase",
+    "difficulty": "beginner",
+    "tags": [],
+    "notes": "Used when parting",
+    "pronunciation_guide": "le-hit-ra-ot",
+    "example_sentence": {
+      "hebrew": "לְהִתְרָאוֹת, נִפְגָּשׁ מָחָר",
+      "english": "Goodbye, see you tomorrow"
+    }
+  },
+  {
+    "hebrew": "תּוֹדָה רַבָּה",
+    "english": "thank you very much",
+    "category": "phrase",
+    "difficulty": "beginner",
+    "tags": [],
+    "notes": "",
+    "pronunciation_guide": "toh-dah ra-ba",
+    "example_sentence": {
+      "hebrew": "תּוֹדָה רַבָּה עַל הַעֶזְרָה",
+      "english": "Thank you very much for the help"
+    }
+  },
+  {
+    "hebrew": "שָׁלוֹם",
+    "english": "hello/peace",
+    "category": "greeting",
+    "difficulty": "beginner",
+    "tags": [],
+    "notes": "Used as both hello and goodbye",
+    "pronunciation_guide": "sha-lom",
+    "example_sentence": {
+      "hebrew": "שָׁלוֹם, מַה נִשְׁמַע?",
+      "english": "Hello, what's up?"
+    }
+  },
+  {
+    "hebrew": "בּוֹקֶר טוֹב",
+    "english": "good morning",
+    "category": "greeting",
+    "difficulty": "beginner",
+    "tags": [],
+    "notes": "",
+    "pronunciation_guide": "bo-ker tov",
+    "example_sentence": {
+      "hebrew": "בּוֹקֶר טוֹב לְכֻלָּם",
+      "english": "Good morning everyone"
+    }
+  },
+  {
+    "hebrew": "לַיְלָה טוֹב",
+    "english": "good night",
+    "category": "greeting",
+    "difficulty": "beginner",
+    "tags": [],
+    "notes": "",
+    "pronunciation_guide": "lay-lah tov",
+    "example_sentence": {
+      "hebrew": "לַיְלָה טוֹב, חֲבֵרִים",
+      "english": "Good night, friends"
+    }
+  },
+  {
+    "hebrew": "אֶחָד",
+    "english": "one",
+    "category": "number",
+    "difficulty": "beginner",
+    "tags": [],
+    "notes": "",
+    "pronunciation_guide": "eh-khad",
+    "example_sentence": {
+      "hebrew": "אֶחָד, שְׁנַיִם, שְׁלֹשָׁה...",
+      "english": "One, two, three..."
+    }
+  },
+  {
+    "hebrew": "שְׁנַיִם",
+    "english": "two",
+    "category": "number",
+    "difficulty": "beginner",
+    "tags": [],
+    "notes": "",
+    "pronunciation_guide": "shnayim",
+    "example_sentence": {
+      "hebrew": "שְׁנַיִם חֲבֵרִים",
+      "english": "Two friends"
+    }
+  },
+  {
+    "hebrew": "שְׁלֹשָׁה",
+    "english": "three",
+    "category": "number",
+    "difficulty": "beginner",
+    "tags": [],
+    "notes": "",
+    "pronunciation_guide": "shlosha",
+    "example_sentence": {
+      "hebrew": "שְׁלֹשָׁה סֵפֶרִים",
+      "english": "Three books"
+    }
+  },
+  {
+    "hebrew": "אַרְבָּעָה",
+    "english": "four",
+    "category": "number",
+    "difficulty": "beginner",
+    "tags": [],
+    "notes": "",
+    "pronunciation_guide": "ar-ba-ah",
+    "example_sentence": {
+      "hebrew": "אַרְבָּעָה יַלְדִּים",
+      "english": "Four children"
+    }
+  },
+  {
+    "hebrew": "מָה",
+    "english": "what",
+    "category": "question",
+    "difficulty": "beginner",
+    "tags": [],
+    "notes": "",
+    "pronunciation_guide": "mah",
+    "example_sentence": {
+      "hebrew": "מָה זֶה?",
+      "english": "What is this?"
+    }
+  },
+  {
+    "hebrew": "לָמָּה",
+    "english": "why",
+    "category": "question",
+    "difficulty": "beginner",
+    "tags": [],
+    "notes": "",
+    "pronunciation_guide": "la-mah",
+    "example_sentence": {
+      "hebrew": "לָמָּה אַתָּה עָצֵב?",
+      "english": "Why are you sad?"
+    }
+  },
+  {
+    "hebrew": "אֵיךְ",
+    "english": "how",
+    "category": "question",
+    "difficulty": "beginner",
+    "tags": [],
+    "notes": "",
+    "pronunciation_guide": "eykh",
+    "example_sentence": {
+      "hebrew": "אֵיךְ זוֹ נִרְאֵית?",
+      "english": "How does it look?"
+    }
+  },
+  {
+    "hebrew": "מָתַי",
+    "english": "when",
+    "category": "question",
+    "difficulty": "beginner",
+    "tags": [],
+    "notes": "",
+    "pronunciation_guide": "ma-ta-y",
+    "example_sentence": {
+      "hebrew": "מָתַי נִפְגָּשׁ?",
+      "english": "When will we meet?"
+    }
+  },
+  {
+    "hebrew": "אֵיפֹה",
+    "english": "where",
+    "category": "question",
+    "difficulty": "beginner",
+    "tags": [],
+    "notes": "",
+    "pronunciation_guide": "ei-foh",
+    "example_sentence": {
+      "hebrew": "אֵיפֹה הַסֵּפֶר?",
+      "english": "Where is the book?"
+    }
+  },
+  {
+    "hebrew": "אוּפְס",
+    "english": "oops",
+    "category": "other",
+    "difficulty": "beginner",
+    "tags": ["expression"],
+    "notes": "An expression used when a mistake is made",
+    "pronunciation_guide": "oops",
+    "example_sentence": {
+      "hebrew": "אוּפְס, טָעוּת!",
+      "english": "Oops, mistake!"
+    }
+  }
+]
