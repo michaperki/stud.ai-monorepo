@@ -35,17 +35,17 @@ export default function App() {
   const sessionTimerRef = useRef(null);
   const sessionPausedRef = useRef(state.session.paused);
 
-  const handleUpdateAudioSettings = (newSettings) => {
+  const handleUpdateAudioSettings = useCallback((newSettings) => {
     console.log('Updating audio settings:', newSettings);
     localStorage.setItem('audioSettings', JSON.stringify(newSettings));
-  };
+  }, []);
 
   const handleApiError = useCallback((error, message) => {
     console.error('API Error:', error);
     const errorMessage = error.response?.data?.detail || message || 'Server error';
     dispatch({ type: 'SET_ERROR', payload: errorMessage });
     toast.error(errorMessage);
-  }, [dispatch]);
+  }, []);
 
   const handleMicrophoneError = useCallback((error) => {
     console.log('Microphone error detected:', error.message);
@@ -67,24 +67,24 @@ export default function App() {
       return;
     }
     
-    const isCriticalError = error.name === 'NotFoundError' || 
-                              error.name === 'NotAllowedError' || 
+    const isCriticalError = error.name === 'NotFoundError' ||
+                              error.name === 'NotAllowedError' ||
                               error.message.includes('No microphone') ||
                               error.name === 'NotReadableError';
     
     if (isCriticalError) {
-      dispatch({ 
-        type: 'SET_MICROPHONE_ERROR', 
-        payload: { 
+      dispatch({
+        type: 'SET_MICROPHONE_ERROR',
+        payload: {
           isOpen: true,
           message: error.message || 'Could not access the microphone. Please check your device and permissions.',
           isCritical: true
-        } 
+        }
       });
     } else {
       toast.error(error.message || 'Microphone error. Please check your settings.');
     }
-  }, [dispatch]);
+  }, []);
 
   const handleRecordingComplete = useCallback(async (audioBlob, word) => {
     if (!audioBlob || audioBlob.size === 0) {
@@ -122,14 +122,14 @@ export default function App() {
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
     }
-  }, [handleApiError, dispatch]);
+  }, [handleApiError]);
 
   const {
-    isRecording, 
-    startRecording, 
-    stopRecording, 
-    stream, 
-    microphoneAvailable, 
+    isRecording,
+    startRecording,
+    stopRecording,
+    stream,
+    microphoneAvailable,
     retryMicrophoneAccess,
     audioSettings
   } = useRecorder(handleRecordingComplete, handleMicrophoneError);
@@ -165,7 +165,19 @@ export default function App() {
         }
       }
     });
-  }, [state.ttsAudio, state.practiceWithoutMic, state.currentWord, playTTS, startRecording, handleMicrophoneError, dispatch]);
+  }, [state.ttsAudio, state.practiceWithoutMic, state.currentWord, playTTS, startRecording, handleMicrophoneError]);
+
+  const handleOpenDiagnostics = useCallback(() => {
+    dispatch({ 
+      type: 'SET_MICROPHONE_ERROR', 
+      payload: { 
+        isOpen: true, 
+        message: 'Test your microphone before starting a session.',
+        isCritical: false
+      }
+    });
+    setShowDiagnostics(true);
+  }, []);
 
   const handleGetWordWithoutMic = useCallback(async () => {
     if (state.session.paused) return;
@@ -187,7 +199,7 @@ export default function App() {
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
     }
-  }, [state.session.paused, state.settings.promptLanguage, playTTS, dispatch, handleApiError]);
+  }, [state.session.paused, state.settings.promptLanguage, playTTS, handleApiError]);
 
   const handleContinueWithoutMic = useCallback(() => {
     dispatch({ type: 'SET_PRACTICE_WITHOUT_MIC', payload: true });
@@ -196,7 +208,7 @@ export default function App() {
     if (state.session.active && !state.session.paused) {
       handleGetWordWithoutMic();
     }
-  }, [state.session.active, state.session.paused, dispatch, handleGetWordWithoutMic]);
+  }, [state.session.active, state.session.paused, handleGetWordWithoutMic]);
 
   useEffect(() => {
     sessionPausedRef.current = state.session.paused;
@@ -206,17 +218,17 @@ export default function App() {
     if (isRecording) {
       dispatch({ type: 'SET_RECORDING_STATE', payload: 'recording' });
     }
-  }, [isRecording, dispatch]);
+  }, [isRecording]);
 
   useEffect(() => {
     if (state.session.active && !state.session.paused) {
-      sessionTimerRef.current = setInterval(() => 
+      sessionTimerRef.current = setInterval(() =>
         dispatch({ type: 'INCREMENT_SESSION_TIME' }), 1000);
     } else {
       clearInterval(sessionTimerRef.current);
     }
     return () => clearInterval(sessionTimerRef.current);
-  }, [state.session.active, state.session.paused, dispatch]);
+  }, [state.session.active, state.session.paused]);
 
   useEffect(() => {
     const handleRetry = () => {
@@ -227,19 +239,55 @@ export default function App() {
     };
     window.addEventListener('retry-pronunciation', handleRetry);
     return () => window.removeEventListener('retry-pronunciation', handleRetry);
-  }, [state.currentWord, handleReplayTts, dispatch]);
+  }, [state.currentWord, handleReplayTts]);
 
-  const handleOpenDiagnostics = useCallback(() => {
-    dispatch({ 
-      type: 'SET_MICROPHONE_ERROR', 
-      payload: { 
-        isOpen: true, 
-        message: 'Test your microphone before starting a session.',
-        isCritical: false
-      }
+  const handleCloseErrorModal = useCallback(() => {
+    if (retryMicrophoneAccess) {
+      retryMicrophoneAccess().catch(err => {
+        console.warn("Retry microphone access failed:", err);
+      });
+    }
+    dispatch({
+      type: 'SET_MICROPHONE_ERROR',
+      payload: { isOpen: false }
     });
-    setShowDiagnostics(true);
-  }, [dispatch]);
+    setShowDiagnostics(false);
+  }, [retryMicrophoneAccess]);
+
+  // Preserve handleManualFeedback unchanged
+  function handleManualFeedback(isCorrect) {
+    const feedbackData = {
+      user_response: state.currentWord,
+      is_correct: isCorrect,
+      correct_answer: state.currentWord,
+      pronunciation_score: isCorrect ? 90 : 45
+    };
+    dispatch({
+      type: 'ADD_HISTORY',
+      payload: {
+        word: state.currentWord,
+        userResponse: state.currentWord,
+        isCorrect,
+        timestamp: new Date().toISOString(),
+      },
+    });
+    dispatch({
+      type: 'UPDATE_STATS',
+      payload: { isCorrect, word: state.currentWord },
+    });
+    dispatch({ type: 'SET_FEEDBACK', payload: feedbackData });
+    if (!isCorrect) {
+      dispatch({ type: 'INCREMENT_ATTEMPTS' });
+    }
+    const soundFile = isCorrect ? '/correct.mp3' : '/incorrect.mp3';
+    const feedbackAudio = new Audio(soundFile);
+    feedbackAudio.play();
+    if (!sessionPausedRef.current && isCorrect) {
+      feedbackAudio.onended = () => {
+        handleNextWord();
+      };
+    }
+  }
 
   const handleGetWord = async () => {
     if (state.practiceWithoutMic) {
@@ -253,11 +301,10 @@ export default function App() {
       const options = {
         category: state.settings.wordCategory || undefined,
         difficulty: state.settings.difficultyLevel || undefined,
-        exclude: state.history.length > 0 
-          ? state.history.slice(0, 5).map(item => item.word) 
+        exclude: state.history.length > 0
+          ? state.history.slice(0, 5).map(item => item.word)
           : undefined
       };
-      
       const data = await api.fetchNextWordEnhanced(lang, options);
       const newWord = data.word;
       dispatch({ type: 'SET_WORD', payload: newWord });
@@ -316,7 +363,6 @@ export default function App() {
     }
   };
 
-  // Move to the next word (guarded against duplicates)
   const handleNextWord = () => {
     if (nextWordCalledRef.current) {
       console.log("handleNextWord already called, skipping duplicate call");
@@ -378,8 +424,8 @@ export default function App() {
   };
 
   const handleVocabularySettings = (vocabSettings) => {
-    dispatch({ 
-      type: 'SET_SETTINGS', 
+    dispatch({
+      type: 'SET_SETTINGS',
       payload: {
         wordCategory: vocabSettings.wordCategory,
         difficultyLevel: vocabSettings.difficultyLevel
@@ -403,7 +449,7 @@ export default function App() {
 
   return (
     <SessionProvider value={sessionContextValue}>
-      <motion.div 
+      <motion.div
         className="app-container"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -412,7 +458,7 @@ export default function App() {
         <header className="app-header">
           <h1 className="app-title">Hebrew Word Practice</h1>
           {state.session.active && (
-            <SessionControls 
+            <SessionControls
               sessionTime={state.session.time}
               isPaused={state.session.paused}
               onTogglePause={togglePauseSession}
@@ -422,7 +468,7 @@ export default function App() {
         </header>
 
         {state.error && (
-          <motion.div 
+          <motion.div
             className="error-message"
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
@@ -434,7 +480,7 @@ export default function App() {
 
         <main className="app-content">
           {!state.session.active ? (
-            <motion.div 
+            <motion.div
               className="welcome-screen"
               initial={{ scale: 0.9 }}
               animate={{ scale: 1 }}
@@ -449,7 +495,7 @@ export default function App() {
               >
                 {state.loading ? <span className="spinner"></span> : 'Start a New Session'}
               </button>
-              
+
               <button
                 className="button secondary"
                 onClick={handleOpenDiagnostics}
@@ -458,9 +504,9 @@ export default function App() {
                 {microphoneAvailable === false ? <BsMicMute /> : <BsMic />}
                 Test Microphone
               </button>
-              
+
               {microphoneAvailable === false && (
-                <motion.div 
+                <motion.div
                   className="mic-warning"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -472,7 +518,7 @@ export default function App() {
             </motion.div>
           ) : (
             <AnimatePresence mode="wait">
-              <motion.div 
+              <motion.div
                 className="practice-area"
                 key="practice"
                 initial={{ opacity: 0, y: 20 }}
@@ -480,8 +526,8 @@ export default function App() {
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.3 }}
               >
-                <WordDisplay 
-                  word={state.currentWord} 
+                <WordDisplay
+                  word={state.currentWord}
                   ttsAudio={state.ttsAudio}
                   onReplayTts={handleReplayTts}
                   loading={state.loading}
@@ -490,14 +536,14 @@ export default function App() {
                   metadata={state.wordMetadata}
                   onPlayCorrectPronunciation={handlePlayCorrectPronunciation}
                 />
-                  
+
                 {stream && !state.practiceWithoutMic && (
                   <motion.div
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: 0.3 }}
                   >
-                    <SimpleAudioVisualizer 
+                    <SimpleAudioVisualizer
                       stream={stream}
                       onSilenceDetected={stopRecording}
                       silenceThreshold={audioSettings.silenceThreshold}
@@ -507,7 +553,7 @@ export default function App() {
                     />
                   </motion.div>
                 )}
-                  
+
                 {state.practiceWithoutMic && state.recordingState === 'no-mic-mode' && !state.feedback && (
                   <NoMicControls
                     onCorrect={() => handleManualFeedback(true)}
@@ -517,9 +563,9 @@ export default function App() {
                     sessionPaused={state.session.paused}
                   />
                 )}
-                  
+
                 <StatusIndicator recordingState={state.recordingState} />
-                  
+
                 <AnimatePresence>
                   {state.feedback && (
                     <motion.div
@@ -528,8 +574,8 @@ export default function App() {
                       exit={{ opacity: 0, y: -20 }}
                       transition={{ duration: 0.3 }}
                     >
-                      <FeedbackDisplay 
-                        feedback={state.feedback} 
+                      <FeedbackDisplay
+                        feedback={state.feedback}
                         loading={state.loading}
                         onNextWord={handleNextWord}
                         sessionPaused={state.session.paused}
@@ -582,7 +628,7 @@ export default function App() {
           </div>
         )}
       </AnimatePresence>
-      
+
       <Toaster position="top-right" />
     </SessionProvider>
   );
