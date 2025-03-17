@@ -46,6 +46,7 @@ export const initialState = {
     silenceThreshold: 20,
     silenceDuration: 1500,
     autoPlayTTS: true,
+    autoAdvanceDelay: 5, // 5 seconds default, 0 means disabled
   },
 };
 

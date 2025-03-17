@@ -1,3 +1,4 @@
+
 // src/App.js
 import React, { useReducer, useEffect, useRef, useCallback, useState } from 'react';
 import { Toaster, toast } from 'react-hot-toast';
@@ -13,7 +14,7 @@ import WordDisplay from './components/WordDisplay';
 import MicrophoneErrorModal from './components/MicrophoneErrorModal';
 import MicrophoneDiagnostics from './components/MicrophoneDiagnostics';
 import NoMicControls from './components/NoMicControls';
-import AudioSettings from './components/AudioSettings'
+import AudioSettings from './components/AudioSettings';
 import useRecorder from './hooks/useRecorder';
 import { useTTS } from './hooks/useTTS';
 import * as api from './services/api';
@@ -24,6 +25,9 @@ import { SessionProvider } from './contexts/SessionContext';
 import { BsMic, BsMicMute } from 'react-icons/bs';
 
 export default function App() {
+  // Ref to guard against duplicate next word calls.
+  const nextWordCalledRef = useRef(false);
+  
   const [state, dispatch] = useReducer(appReducer, initialState);
   const { playTTS } = useTTS();
   const [showDiagnostics, setShowDiagnostics] = useState(false);
@@ -32,22 +36,13 @@ export default function App() {
   const sessionTimerRef = useRef(null);
   const sessionPausedRef = useRef(state.session.paused);
 
-  // Add this function in your App component
   const handleUpdateAudioSettings = (newSettings) => {
     console.log('Updating audio settings:', newSettings);
-    
-    // You might want to store these in localStorage to persist them
     localStorage.setItem('audioSettings', JSON.stringify(newSettings));
-    
-    // If your useRecorder hook accepts setters, you could update them there
-    // For now, we'll just log them and they'll be used next time
-  }
+  };
 
-  // Handle microphone errors - Define this BEFORE using it in useRecorder
   const handleMicrophoneError = useCallback((error) => {
     console.log('Microphone error detected:', error.message);
-    
-    // Log more details for debugging
     console.error('Detailed microphone error:', {
       name: error.name,
       message: error.message,
@@ -55,31 +50,23 @@ export default function App() {
       originalError: error.originalError
     });
     
-    // Special handling for retry recording
     if (error.message === 'RETRY_RECORDING') {
-      // Just reset the recording state without showing an error
       dispatch({ type: 'SET_RECORDING_STATE', payload: 'idle' });
       return;
     }
     
-    // Check if this is a "no audio data" error which might be intermittent
     if (error.message.includes('No audio data was captured')) {
-      // For "no audio data" errors, just show a toast instead of the modal
       toast.error('No audio detected. Please speak louder or check your microphone.');
-      
-      // Reset recording state to allow another attempt
       dispatch({ type: 'SET_RECORDING_STATE', payload: 'idle' });
       return;
     }
     
-    // Determine if this is a critical error that should show the modal
     const isCriticalError = error.name === 'NotFoundError' || 
-                          error.name === 'NotAllowedError' || 
-                          error.message.includes('No microphone') ||
-                          error.name === 'NotReadableError';
+                              error.name === 'NotAllowedError' || 
+                              error.message.includes('No microphone') ||
+                              error.name === 'NotReadableError';
     
     if (isCriticalError) {
-      // Show the modal with a helpful message
       dispatch({ 
         type: 'SET_MICROPHONE_ERROR', 
         payload: { 
@@ -89,12 +76,10 @@ export default function App() {
         } 
       });
     } else {
-      // For non-critical errors, just show a toast notification
       toast.error(error.message || 'Microphone error. Please check your settings.');
     }
   }, [dispatch]);
       
-  // Now use handleMicrophoneError in useRecorder after it's been defined
   const { 
     isRecording, 
     startRecording, 
@@ -103,26 +88,19 @@ export default function App() {
     microphoneAvailable, 
     retryMicrophoneAccess,
     audioSettings
-  } = useRecorder(
-    handleRecordingComplete, 
-    handleMicrophoneError
-  );
+  } = useRecorder(handleRecordingComplete, handleMicrophoneError);
 
-  // Function to check browser support on component mount
   useEffect(() => {
     const checkSupport = async () => {
       const browserSupport = checkBrowserSupport();
       console.log('Browser audio support:', browserSupport);
-      
       if (!browserSupport.mediaDevices || !browserSupport.getUserMedia) {
         toast.error('Your browser may not fully support audio recording. Consider trying a different browser.');
       }
     };
-    
     checkSupport();
   }, []);
 
-  // Listen for retry event
   useEffect(() => {
     const handleRetry = () => {
       if (state.currentWord) {
@@ -130,54 +108,42 @@ export default function App() {
         handleReplayTts();
       }
     };
-    
     window.addEventListener('retry-pronunciation', handleRetry);
     return () => window.removeEventListener('retry-pronunciation', handleRetry);
   }, [state.currentWord]);
   
-  // Close the microphone error modal
   const handleCloseErrorModal = useCallback(() => {
-    // Try to re-access the microphone when closing the modal
     if (retryMicrophoneAccess) {
       retryMicrophoneAccess().catch(err => {
         console.warn("Retry microphone access failed:", err);
       });
     }
-    
     dispatch({ 
       type: 'SET_MICROPHONE_ERROR', 
       payload: { isOpen: false } 
     });
-    
     setShowDiagnostics(false);
   }, [retryMicrophoneAccess]);
-  
-  // Continue without using the microphone
+
   const handleContinueWithoutMic = useCallback(() => {
-    // Enable practice without microphone mode
     dispatch({ type: 'SET_PRACTICE_WITHOUT_MIC', payload: true });
     dispatch({ type: 'SET_MICROPHONE_ERROR', payload: { isOpen: false } });
     setShowDiagnostics(false);
-    
-    // If we're in an active session, get the next word
     if (state.session.active && !state.session.paused) {
       handleGetWordWithoutMic();
     }
   }, [state.session.active, state.session.paused]);
 
-  // Update ref when pause state changes
   useEffect(() => {
     sessionPausedRef.current = state.session.paused;
   }, [state.session.paused]);
 
-  // Update recording state when recorder changes
   useEffect(() => {
     if (isRecording) {
       dispatch({ type: 'SET_RECORDING_STATE', payload: 'recording' });
     }
   }, [isRecording]);
 
-  // Session timer effect
   useEffect(() => {
     if (state.session.active && !state.session.paused) {
       sessionTimerRef.current = setInterval(() => 
@@ -188,7 +154,6 @@ export default function App() {
     return () => clearInterval(sessionTimerRef.current);
   }, [state.session.active, state.session.paused]);
 
-  // Handle API errors with toast notifications
   const handleApiError = (error, message) => {
     console.error('API Error:', error);
     const errorMessage = error.response?.data?.detail || message || 'Server error';
@@ -196,7 +161,6 @@ export default function App() {
     toast.error(errorMessage);
   };
 
-  // Open the microphone diagnostics tool
   const handleOpenDiagnostics = useCallback(() => {
     dispatch({ 
       type: 'SET_MICROPHONE_ERROR', 
@@ -206,30 +170,23 @@ export default function App() {
         isCritical: false
       }
     });
-    
     setShowDiagnostics(true);
   }, []);
 
-  // Function for getting words in no-microphone mode
   const handleGetWordWithoutMic = async () => {
     if (state.session.paused) return;
-    
     dispatch({ type: 'SET_LOADING', payload: true });
-    
     try {
       const lang = state.settings.promptLanguage;
       const data = await api.fetchNextWord(lang);
       const newWord = data.word;
-      
       dispatch({ type: 'SET_WORD', payload: newWord });
       dispatch({ type: 'SET_TTS_AUDIO', payload: data.audio_base64 });
-      
+      nextWordCalledRef.current = false; // Reset the guard.
       if (data.audio_base64) {
         const audioSrc = `data:audio/wav;base64,${data.audio_base64}`;
         playTTS(audioSrc);
       }
-      
-      // In no-mic mode, we show buttons to manually indicate correct/incorrect
       dispatch({ type: 'SET_RECORDING_STATE', payload: 'no-mic-mode' });
     } catch (error) {
       handleApiError(error, 'Failed to fetch word');
@@ -238,23 +195,17 @@ export default function App() {
     }
   };
 
-  // Process recording when complete
   async function handleRecordingComplete(audioBlob, word) {
     if (!audioBlob || audioBlob.size === 0) {
       console.warn('Empty audio blob received - skipping processing');
       dispatch({ type: 'SET_RECORDING_STATE', payload: 'idle' });
       return;
     }
-    
     dispatch({ type: 'SET_RECORDING_STATE', payload: 'recorded' });
     dispatch({ type: 'SET_LOADING', payload: true });
-    
     try {
       if (!word) throw new Error('No word provided to check answer');
-
-      // Use the actual API call instead of simulation
       const data = await api.checkAnswer(word, audioBlob);
-
       dispatch({
         type: 'ADD_HISTORY',
         payload: {
@@ -264,30 +215,17 @@ export default function App() {
           timestamp: new Date().toISOString(),
         },
       });
-      
       dispatch({
         type: 'UPDATE_STATS',
-        payload: {
-          isCorrect: data.is_correct,
-          word,
-        },
+        payload: { isCorrect: data.is_correct, word },
       });
-      
       dispatch({ type: 'SET_FEEDBACK', payload: data });
-      
       if (!data.is_correct) {
         dispatch({ type: 'INCREMENT_ATTEMPTS' });
       }
-      
       const soundFile = data.is_correct ? '/correct.mp3' : '/incorrect.mp3';
       const feedbackAudio = new Audio(soundFile);
       feedbackAudio.play();
-      
-      if (!sessionPausedRef.current && data.is_correct) {
-        feedbackAudio.onended = () => {
-          handleNextWord();
-        };
-      }
     } catch (error) {
       handleApiError(error, 'Failed to check answer');
     } finally {
@@ -295,52 +233,33 @@ export default function App() {
     }
   }
 
-  // Function to handle manual word feedback in no-mic mode
   const handleManualFeedback = (isCorrect) => {
-    // Simulate feedback similar to what the API would return
     const feedbackData = {
-      user_response: state.currentWord, // In manual mode, we assume user said the word
+      user_response: state.currentWord,
       is_correct: isCorrect,
       correct_answer: state.currentWord,
-      pronunciation_score: isCorrect ? 90 : 45 // arbitrary score
+      pronunciation_score: isCorrect ? 90 : 45
     };
-    
-    // Add to history
     dispatch({
       type: 'ADD_HISTORY',
       payload: {
         word: state.currentWord,
         userResponse: state.currentWord,
-        isCorrect: isCorrect,
+        isCorrect,
         timestamp: new Date().toISOString(),
       },
     });
-    
-    // Update stats
     dispatch({
       type: 'UPDATE_STATS',
-      payload: {
-        isCorrect: isCorrect,
-        word: state.currentWord,
-      },
+      payload: { isCorrect, word: state.currentWord },
     });
-    
-    // Set feedback to display results
-    dispatch({ 
-      type: 'SET_FEEDBACK', 
-      payload: feedbackData
-    });
-    
+    dispatch({ type: 'SET_FEEDBACK', payload: feedbackData });
     if (!isCorrect) {
       dispatch({ type: 'INCREMENT_ATTEMPTS' });
     }
-    
-    // Play feedback sound
     const soundFile = isCorrect ? '/correct.mp3' : '/incorrect.mp3';
     const feedbackAudio = new Audio(soundFile);
     feedbackAudio.play();
-    
-    // Automatically proceed to next word if session is active, not paused, and answer was correct
     if (!sessionPausedRef.current && isCorrect) {
       feedbackAudio.onended = () => {
         handleNextWord();
@@ -350,24 +269,19 @@ export default function App() {
 
   // Fetch and play the next word (with microphone mode)
   const handleGetWord = async () => {
-    // If we're in practice without mic mode, use the no-mic version
     if (state.practiceWithoutMic) {
       handleGetWordWithoutMic();
       return;
     }
-    
     if (state.session.paused) return;
-    
     dispatch({ type: 'SET_LOADING', payload: true });
-    
     try {
       const lang = state.settings.promptLanguage;
       const data = await api.fetchNextWord(lang);
       const newWord = data.word;
-      
       dispatch({ type: 'SET_WORD', payload: newWord });
       dispatch({ type: 'SET_TTS_AUDIO', payload: data.audio_base64 });
-      
+      nextWordCalledRef.current = false; // Reset the guard once a new word is fetched.
       if (data.audio_base64) {
         const audioSrc = `data:audio/wav;base64,${data.audio_base64}`;
         playTTS(audioSrc, () => {
@@ -375,15 +289,11 @@ export default function App() {
             try {
               startRecording(newWord).catch(error => {
                 console.error("Failed to start recording:", error);
-                
-                // Handle microphone not found errors
                 if (error.name === 'NotFoundError' || error.name === 'NotAllowedError' || error.name === 'NotReadableError') {
                   handleMicrophoneError(error);
                 } else {
                   toast.error("Could not access microphone. Please check your microphone permissions.");
                 }
-                
-                // Still update UI state even if recording fails
                 dispatch({ type: 'SET_RECORDING_STATE', payload: 'idle' });
               });
             } catch (error) {
@@ -403,8 +313,6 @@ export default function App() {
   // Begin a new session
   const handleStartSession = async () => {
     dispatch({ type: 'START_SESSION' });
-    
-    // If we already know microphone isn't available, start in no-mic mode
     if (microphoneAvailable === false) {
       dispatch({ type: 'SET_PRACTICE_WITHOUT_MIC', payload: true });
       await handleGetWordWithoutMic();
@@ -413,14 +321,10 @@ export default function App() {
     }
   };
 
-  // Pause or resume the session
   const togglePauseSession = () => {
     if (state.session.paused) {
-      // Resume session
       dispatch({ type: 'RESUME_SESSION' });
-      
       if (state.currentWord) {
-        // Replay the TTS prompt to resume the cycle
         if (state.ttsAudio) {
           handleReplayTts();
         } else {
@@ -430,34 +334,26 @@ export default function App() {
         state.practiceWithoutMic ? handleGetWordWithoutMic() : handleGetWord();
       }
     } else {
-      // Pause session
       dispatch({ type: 'PAUSE_SESSION' });
     }
   };
 
-  // Replay the current word's pronunciation
   const handleReplayTts = () => {
     if (!state.ttsAudio) return;
-    
     const audioSrc = `data:audio/wav;base64,${state.ttsAudio}`;
     playTTS(audioSrc, () => {
       if (!sessionPausedRef.current) {
         if (state.practiceWithoutMic) {
-          // In no-mic mode, we just wait for user feedback buttons
           dispatch({ type: 'SET_RECORDING_STATE', payload: 'no-mic-mode' });
         } else {
           try {
             startRecording(state.currentWord).catch(error => {
               console.error("Failed to start recording:", error);
-              
-              // Maybe switch to no-mic mode automatically here if appropriate
               if (error.name === 'NotFoundError' || error.name === 'NotAllowedError' || error.name === 'NotReadableError') {
                 handleMicrophoneError(error);
               } else {
                 toast.error("Could not access microphone. Please check your microphone permissions.");
               }
-              
-              // Still update UI state even if recording fails
               dispatch({ type: 'SET_RECORDING_STATE', payload: 'idle' });
             });
           } catch (error) {
@@ -469,25 +365,27 @@ export default function App() {
     });
   };
 
-  // Move to the next word
+  // Move to the next word (guarded against duplicates)
   const handleNextWord = () => {
+    if (nextWordCalledRef.current) {
+      console.log("handleNextWord already called, skipping duplicate call");
+      return;
+    }
+    nextWordCalledRef.current = true;
     dispatch({ type: 'RESET_WORD_STATE' });
     if (!state.session.paused) {
       state.practiceWithoutMic ? handleGetWordWithoutMic() : handleGetWord();
     }
   };
 
-  // Change the prompt language
   const handleChangeLanguage = (newLang) => {
     dispatch({ type: 'SET_SETTINGS', payload: { promptLanguage: newLang } });
   };
 
-  // End the current session
   const handleEndSession = () => {
     dispatch({ type: 'END_SESSION' });
   };
 
-  // Session context value
   const sessionContextValue = {
     state: state.session,
     stats: state.stats,
@@ -496,29 +394,18 @@ export default function App() {
     togglePause: togglePauseSession,
   };
 
-  // Inside the App component, add this function:
   const handlePlayCorrectPronunciation = async () => {
     try {
-      // Get the correct answer word
       const correctAnswer = state.feedback?.correct_answer;
       if (!correctAnswer) {
         toast.error('No correct answer available');
         return;
       }
-      
-      // Determine which language to use for pronunciation
-      // If the prompt was in Hebrew, we need English pronunciation and vice versa
       const promptLanguage = state.settings.promptLanguage;
       const pronunciationLanguage = promptLanguage === 'en' ? 'iw' : 'en';
-      
-      // Fetch the pronunciation from the API
       const pronunciationData = await api.getWordPronunciation(correctAnswer, pronunciationLanguage);
-      
       if (pronunciationData && pronunciationData.audio_base64) {
-        // Create the audio source from the correct pronunciation
         const audioSrc = `data:audio/wav;base64,${pronunciationData.audio_base64}`;
-        
-        // Play the audio
         const audio = new Audio(audioSrc);
         audio.play().catch(error => {
           console.error('Error playing pronunciation:', error);
@@ -532,6 +419,24 @@ export default function App() {
       toast.error('Failed to get pronunciation');
     }
   };
+
+  const handleUpdateSettings = (newSettings) => {
+    dispatch({ type: 'SET_SETTINGS', payload: newSettings });
+    const currentSettings = { ...state.settings, ...newSettings };
+    localStorage.setItem('appSettings', JSON.stringify(currentSettings));
+  };
+
+  useEffect(() => {
+    const savedSettings = localStorage.getItem('appSettings');
+    if (savedSettings) {
+      try {
+        const parsedSettings = JSON.parse(savedSettings);
+        dispatch({ type: 'SET_SETTINGS', payload: parsedSettings });
+      } catch (e) {
+        console.error('Failed to parse saved settings:', e);
+      }
+    }
+  }, []);
 
   return (
     <SessionProvider value={sessionContextValue}>
@@ -582,7 +487,6 @@ export default function App() {
                 {state.loading ? <span className="spinner"></span> : 'Start a New Session'}
               </button>
               
-              {/* Add microphone test button */}
               <button
                 className="button secondary"
                 onClick={handleOpenDiagnostics}
@@ -622,7 +526,6 @@ export default function App() {
                   hint={state.hintText}
                 />
                 
-                {/* Show visualizer if stream exists and not in no-mic mode */}
                 {stream && !state.practiceWithoutMic && (
                   <motion.div
                     initial={{ opacity: 0, scale: 0.9 }}
@@ -640,7 +543,6 @@ export default function App() {
                   </motion.div>
                 )}
                 
-                {/* Show no-mic controls when in no-mic mode */}
                 {state.practiceWithoutMic && state.recordingState === 'no-mic-mode' && !state.feedback && (
                   <NoMicControls
                     onCorrect={() => handleManualFeedback(true)}
@@ -661,14 +563,14 @@ export default function App() {
                       exit={{ opacity: 0, y: -20 }}
                       transition={{ duration: 0.3 }}
                     >
-                    <FeedbackDisplay 
-                      feedback={state.feedback} 
-                      loading={state.loading}
-                      onNextWord={handleNextWord}
-                      sessionPaused={state.session.paused}
-                      onPlayCorrectPronunciation={handlePlayCorrectPronunciation}
-                    />
-
+                      <FeedbackDisplay 
+                        feedback={state.feedback} 
+                        loading={state.loading}
+                        onNextWord={handleNextWord}
+                        sessionPaused={state.session.paused}
+                        onPlayCorrectPronunciation={handlePlayCorrectPronunciation}
+                        autoAdvanceDelay={state.settings.autoAdvanceDelay}
+                      />
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -683,19 +585,18 @@ export default function App() {
               onChangeLanguage={handleChangeLanguage}
               audioSettings={audioSettings}
               onUpdateAudioSettings={handleUpdateAudioSettings}
+              autoAdvanceDelay={state.settings.autoAdvanceDelay}
+              onUpdateSettings={handleUpdateSettings}
             />
           </div>
         </main>
       </motion.div>
 
-      {/* Microphone Error Modal */}
       <AnimatePresence>
         {state.microphoneError.isOpen && (
           <div className="modal-overlay">
             {showDiagnostics ? (
-              <MicrophoneDiagnostics 
-                onClose={handleCloseErrorModal} 
-              />
+              <MicrophoneDiagnostics onClose={handleCloseErrorModal} />
             ) : (
               <MicrophoneErrorModal
                 isOpen={state.microphoneError.isOpen}
@@ -714,3 +615,4 @@ export default function App() {
     </SessionProvider>
   );
 }
+

@@ -708,6 +708,33 @@ body {
   gap: 0.5rem;
 }
 
+/* Countdown Timer Style */
+.countdown-timer {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: rgba(0, 0, 0, 0.08);
+  padding: 0.25rem 0.5rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  color: var(--text-color);
+  margin-left: auto;
+}
+
+.countdown-timer svg {
+  color: var(--primary-color);
+}
+
+/* Make sure we update the feedback header to accommodate the timer */
+.feedback-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  flex-wrap: wrap;
+}
+
 /* Responsive Adjustments */
 @media (max-width: 992px) {
   .app-content {
@@ -755,3 +782,4 @@ body {
     flex-direction: column;
   }
 }
+

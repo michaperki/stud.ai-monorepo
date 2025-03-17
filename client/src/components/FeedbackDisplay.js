@@ -1,13 +1,101 @@
-// src/components/FeedbackDisplay.js
-import React from 'react';
-import { motion } from 'framer-motion';
-import { BsCheckCircleFill, BsXCircleFill, BsArrowRightCircle, BsXCircle, BsMic, BsVolumeUp } from 'react-icons/bs';
 
-const FeedbackDisplay = ({ feedback, loading, onNextWord, sessionPaused, onPlayCorrectPronunciation }) => {
+// src/components/FeedbackDisplay.js
+import React, { useState, useEffect, useRef } from 'react';
+import { motion } from 'framer-motion';
+import { 
+  BsCheckCircleFill, 
+  BsXCircleFill, 
+  BsArrowRightCircle, 
+  BsStopwatch, 
+  BsMic, 
+  BsVolumeUp 
+} from 'react-icons/bs';
+
+const FeedbackDisplay = ({ 
+  feedback, 
+  loading, 
+  onNextWord, 
+  sessionPaused, 
+  onPlayCorrectPronunciation,
+  autoAdvanceDelay = 5
+}) => {
+  // State for the countdown value.
+  const [countdown, setCountdown] = useState(null);
+  // activeFeedbackKey holds a stable identifier (here, the user_response) for the current correct feedback.
+  const [activeFeedbackKey, setActiveFeedbackKey] = useState(null);
+  // Ref for the timer so we can prevent re‑starting it.
+  const countdownTimerRef = useRef(null);
+  // Ref for onNextWord so that changes in the callback don’t trigger our effect.
+  const onNextWordRef = useRef(onNextWord);
+
+  useEffect(() => {
+    onNextWordRef.current = onNextWord;
+  }, [onNextWord]);
+
+  // Cleanup function for the timer.
+  const cleanupTimer = () => {
+    if (countdownTimerRef.current) {
+      console.log('[Countdown] Clearing timer.');
+      clearInterval(countdownTimerRef.current);
+      countdownTimerRef.current = null;
+    }
+  };
+
+  // Monitor feedback changes and update the activeFeedbackKey.
+  useEffect(() => {
+    console.log('[Feedback Monitor] New feedback received:', feedback);
+    if (feedback && feedback.is_correct) {
+      if (activeFeedbackKey !== feedback.user_response) {
+        console.log('[Feedback Monitor] New correct feedback detected. Setting key:', feedback.user_response);
+        setActiveFeedbackKey(feedback.user_response);
+      }
+    } else {
+      if (activeFeedbackKey !== null) {
+        console.log('[Feedback Monitor] Clearing active feedback key.');
+      }
+      setActiveFeedbackKey(null);
+    }
+  }, [feedback, activeFeedbackKey]);
+
+  // Countdown effect: start timer only when there is an active correct feedback.
+  useEffect(() => {
+    if (!activeFeedbackKey || sessionPaused || autoAdvanceDelay <= 0) {
+      console.log('[Countdown Effect] Conditions not met. activeFeedbackKey:', activeFeedbackKey, 'sessionPaused:', sessionPaused, 'autoAdvanceDelay:', autoAdvanceDelay);
+      cleanupTimer();
+      setCountdown(null);
+      return;
+    }
+    // If a timer is already running, do not restart it.
+    if (countdownTimerRef.current) {
+      console.log('[Countdown Effect] Timer already running for key:', activeFeedbackKey);
+      return;
+    }
+    console.log('[Countdown Effect] Starting countdown for key:', activeFeedbackKey);
+    setCountdown(autoAdvanceDelay);
+    countdownTimerRef.current = setInterval(() => {
+      setCountdown(prev => {
+        console.log('[Countdown Interval] Current count:', prev);
+        if (prev <= 1) {
+          cleanupTimer();
+          console.log('[Countdown Interval] Countdown complete. Calling onNextWord.');
+          onNextWordRef.current();
+          return null;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return cleanupTimer;
+  }, [activeFeedbackKey, sessionPaused, autoAdvanceDelay]);
+
+  const cancelAutoAdvance = () => {
+    console.log('[Cancel] User cancelled auto-advance.');
+    cleanupTimer();
+    setCountdown(null);
+  };
+
   if (!feedback) return null;
-  
   const isCorrect = feedback.is_correct;
-  
+
   return (
     <motion.div 
       className={`feedback-container ${isCorrect ? 'correct' : 'incorrect'}`}
@@ -26,14 +114,18 @@ const FeedbackDisplay = ({ feedback, loading, onNextWord, sessionPaused, onPlayC
         <h3 className="feedback-title">
           {isCorrect ? 'Correct! 👏' : 'Try again! 🔄'}
         </h3>
+        {countdown !== null && (
+          <div className="countdown-timer">
+            <BsStopwatch />
+            <span>{countdown}s</span>
+          </div>
+        )}
       </div>
-      
       <div className="feedback-content">
         <div className="feedback-row">
           <span className="feedback-label">Your response:</span>
           <span className="feedback-value">{feedback.user_response}</span>
         </div>
-        
         <div className="feedback-row">
           <span className="feedback-label">Correct answer:</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -50,7 +142,6 @@ const FeedbackDisplay = ({ feedback, loading, onNextWord, sessionPaused, onPlayC
             </motion.button>
           </div>
         </div>
-        
         {feedback.pronunciation_score && (
           <div className="feedback-row">
             <span className="feedback-label">Pronunciation score:</span>
@@ -64,24 +155,43 @@ const FeedbackDisplay = ({ feedback, loading, onNextWord, sessionPaused, onPlayC
           </div>
         )}
       </div>
-      
       <div className="feedback-buttons">
         {isCorrect ? (
-          <motion.button
-            className="button primary feedback-button"
-            onClick={onNextWord}
-            disabled={loading || sessionPaused}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <span>Next Word</span>
-            <BsArrowRightCircle size={18} />
-          </motion.button>
+          <>
+            <motion.button
+              className="button primary feedback-button"
+              onClick={() => {
+                cancelAutoAdvance();
+                onNextWord();
+              }}
+              disabled={loading || sessionPaused}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <span>Next Word</span>
+              <BsArrowRightCircle size={18} />
+            </motion.button>
+            {countdown !== null && (
+              <motion.button
+                className="button outline feedback-button"
+                onClick={cancelAutoAdvance}
+                disabled={loading || sessionPaused}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <span>Stay on This Word</span>
+                <BsStopwatch size={18} />
+              </motion.button>
+            )}
+          </>
         ) : (
           <>
             <motion.button
               className="button secondary feedback-button"
-              onClick={() => window.dispatchEvent(new CustomEvent('retry-pronunciation'))}
+              onClick={() => {
+                cancelAutoAdvance();
+                window.dispatchEvent(new CustomEvent('retry-pronunciation'));
+              }}
               disabled={loading || sessionPaused}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -91,7 +201,10 @@ const FeedbackDisplay = ({ feedback, loading, onNextWord, sessionPaused, onPlayC
             </motion.button>
             <motion.button
               className="button outline feedback-button"
-              onClick={onNextWord}
+              onClick={() => {
+                cancelAutoAdvance();
+                onNextWord();
+              }}
               disabled={loading || sessionPaused}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -107,3 +220,4 @@ const FeedbackDisplay = ({ feedback, loading, onNextWord, sessionPaused, onPlayC
 };
 
 export default FeedbackDisplay;
+

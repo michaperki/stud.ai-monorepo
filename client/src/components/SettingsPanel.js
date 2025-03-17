@@ -8,11 +8,19 @@ export default function SettingsPanel({
   promptLanguage, 
   onChangeLanguage, 
   audioSettings,
-  onUpdateAudioSettings
+  onUpdateAudioSettings,
+  autoAdvanceDelay = 5,
+  onUpdateSettings
 }) {
   const [expanded, setExpanded] = useState(false);
   
   const toggleExpanded = () => setExpanded(!expanded);
+  
+  // Handle auto-advance delay change
+  const handleAutoAdvanceChange = (e) => {
+    const newValue = parseInt(e.target.value);
+    onUpdateSettings({ autoAdvanceDelay: newValue });
+  };
   
   return (
     <div className="settings-section">
@@ -48,6 +56,27 @@ export default function SettingsPanel({
                 <option value="iw">Hebrew (iw)</option>
                 <option value="en">English (en)</option>
               </select>
+            </div>
+
+            {/* Auto-advance setting */}
+            <div className="settings-group">
+              <label className="settings-label" htmlFor="autoAdvanceDelay">
+                Auto-advance Delay:
+              </label>
+              <select 
+                id="autoAdvanceDelay"
+                className="settings-select"
+                value={autoAdvanceDelay} 
+                onChange={handleAutoAdvanceChange}
+              >
+                <option value="0">Off (Manual Advance)</option>
+                <option value="3">Quick (3 seconds)</option>
+                <option value="5">Normal (5 seconds)</option>
+                <option value="8">Slow (8 seconds)</option>
+              </select>
+              <div className="settings-description">
+                How long to wait before automatically proceeding to the next word after a correct answer.
+              </div>
             </div>
             
             {/* Add audio settings component */}
