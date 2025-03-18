@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import useRecorder from './useRecorder';
 import * as api from '../services/api';

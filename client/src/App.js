@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Toaster } from 'react-hot-toast';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 
 // Component imports
 import AppLayout from './layouts/AppLayout';
@@ -47,7 +47,6 @@ export default function App() {
     stream,
     audioSettings,
     handleMicrophoneError,
-    handleRecordingComplete,
     startRecording,
     stopRecording,
     retryMicrophoneAccess,
@@ -63,13 +62,11 @@ export default function App() {
   const {
     sessionContextValue,
     handleStartSession,
-    handleGetWord,
     handleGetWordWithoutMic,
     handleNextWord,
     togglePauseSession,
     handleReplayTts,
     handleEndSession,
-    playTTS
   } = useSessionManager({
     state,
     dispatch,
