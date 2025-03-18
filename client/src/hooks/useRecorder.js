@@ -1,7 +1,36 @@
+
 // src/hooks/useRecorder.js
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import * as api from '../services/api';
+
+// MIME type detection function
+const getBestMimeType = () => {
+  // Define a list of MIME types to try, in order of preference
+  const mimeTypes = [
+    'audio/webm;codecs=opus',
+    'audio/webm',
+    'audio/ogg;codecs=opus',
+    'audio/ogg',
+    'audio/mp4;codecs=mp4a.40.2',
+    'audio/mp4',
+    // Add WAV as fallback - iOS often supports this
+    'audio/wav',
+    ''  // Empty string as last resort (browser's default)
+  ];
+  
+  // Find the first supported MIME type
+  for (const type of mimeTypes) {
+    if (type === '' || MediaRecorder.isTypeSupported(type)) {
+      console.log(`Using MIME type: ${type || 'default browser codec'}`);
+      return type;
+    }
+  }
+  
+  // If nothing is supported, use empty string (browser's default)
+  console.log('No tested MIME types supported, using browser default');
+  return '';
+};
 
 const useRecorder = (onRecordingComplete, onMicrophoneError) => {
   const [isRecording, setIsRecording] = useState(false);
@@ -327,30 +356,33 @@ const useRecorder = (onRecordingComplete, onMicrophoneError) => {
       
       console.log('Creating MediaRecorder...');
       
-      // Detect the best supported MIME type
-      const mimeTypes = [
-        'audio/webm;codecs=opus',
-        'audio/webm',
-        'audio/ogg;codecs=opus',
-        'audio/mp4;codecs=mp4a.40.2'
-      ];
-      
-      const supportedType = mimeTypes.find(type => MediaRecorder.isTypeSupported(type));
-      
-      // Create and configure MediaRecorder
+      // Create and configure MediaRecorder with iOS handling and best MIME type detection
       let mediaRecorder;
       try {
-        if (supportedType) {
-          console.log(`Using ${supportedType} for recording`);
-          mediaRecorder = new MediaRecorder(audioStream, { 
-            mimeType: supportedType,
-            audioBitsPerSecond: 128000  // Set a reasonable bitrate
-          });
-        } else {
-          console.log('Using default MediaRecorder');
+        // Check for iOS device
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  
+        if (isIOS) {
+          console.log('iOS device detected, using basic MediaRecorder settings');
+          // On iOS, use simpler options - Safari often defaults to audio/mp4
           mediaRecorder = new MediaRecorder(audioStream);
+          console.log('iOS MediaRecorder created with MIME type:', mediaRecorder.mimeType);
+        } else {
+          // For non-iOS, try to use the best supported codec
+          const bestMimeType = getBestMimeType();
+          
+          if (bestMimeType) {
+            console.log(`Using ${bestMimeType} for recording`);
+            mediaRecorder = new MediaRecorder(audioStream, { 
+              mimeType: bestMimeType,
+              audioBitsPerSecond: 128000  // Set a reasonable bitrate
+            });
+          } else {
+            console.log('Using default MediaRecorder');
+            mediaRecorder = new MediaRecorder(audioStream);
+          }
+          console.log('MediaRecorder created with MIME type:', mediaRecorder.mimeType);
         }
-        console.log('MediaRecorder created with MIME type:', mediaRecorder.mimeType);
       } catch (recorderError) {
         console.error('Failed to create MediaRecorder with specific settings, using default:', recorderError);
         mediaRecorder = new MediaRecorder(audioStream);
@@ -369,7 +401,7 @@ const useRecorder = (onRecordingComplete, onMicrophoneError) => {
         }
       };
       
-      // Handle recording stop event
+      // Handle recording stop event with MIME type logging for blob creation
       mediaRecorder.onstop = () => {
         console.log('MediaRecorder stopped, creating audio blob');
         console.log('Chunks collected:', audioChunksRef.current.length);
@@ -406,9 +438,21 @@ const useRecorder = (onRecordingComplete, onMicrophoneError) => {
           return;
         }
         
-        // Create audio blob
-        const blobType = supportedType || 'audio/webm';
+        // Get MIME type - try to use the recorder's mimeType or fall back to a default
+        let blobType = mediaRecorderRef.current ? mediaRecorderRef.current.mimeType : '';
+        if (!blobType || blobType === '') {
+          // If the MediaRecorder didn't specify a MIME type, try to determine one
+          // based on browser/device
+          if (/iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream) {
+            blobType = 'audio/mp4';
+          } else {
+            blobType = 'audio/webm';
+          }
+        }
+        
+        console.log('Creating blob with MIME type:', blobType);
         const blob = new Blob(audioChunksRef.current, { type: blobType });
+        console.log('Blob created, size:', blob.size, 'type:', blob.type);
         
         const url = URL.createObjectURL(blob);
         setAudioBlob(blob);
@@ -603,3 +647,4 @@ const useRecorder = (onRecordingComplete, onMicrophoneError) => {
 };
 
 export default useRecorder;
+

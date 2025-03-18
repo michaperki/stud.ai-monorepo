@@ -1,3 +1,4 @@
+
 # server/api/routes.py
 
 from fastapi import APIRouter, HTTPException, UploadFile, File, Query, Response
@@ -5,16 +6,16 @@ from fastapi.responses import JSONResponse
 import random, base64, os, traceback, tempfile, logging
 import soundfile as sf
 from typing import List, Optional
+import mimetypes
+
+from pydub import AudioSegment
 
 from core.audio import synthesize_speech
 from core.ai import transcribe_audio, similarity
 from core.config import settings
 from data.vocab import WordCategory, DifficultyLevel, VocabWord, get_all_words, get_words_by_category, get_words_by_difficulty, get_random_words, VOCAB, REV_VOCAB
 
-import logging
-
 logger = logging.getLogger(__name__)
-
 router = APIRouter()
 
 @router.get("/next_word")
@@ -25,7 +26,6 @@ async def next_word(
     exclude: Optional[str] = Query(None, description="Comma-separated list of Hebrew words to exclude")
 ):
     try:
-        # Parse filters if provided
         word_category = None
         difficulty_level = None
         exclude_words = []
@@ -45,7 +45,6 @@ async def next_word(
         if exclude:
             exclude_words = exclude.split(",")
         
-        # Get a random word with filters
         selected_words = get_random_words(
             count=1,
             category=word_category,
@@ -54,43 +53,30 @@ async def next_word(
         )
         
         if not selected_words:
-            # If no words match the filters, fall back to a completely random word
             logger.warning(f"No words found with filters: category={category}, difficulty={difficulty}")
             selected_words = get_random_words(count=1)
-            
-            # If still no words (shouldn't happen but just in case)
             if not selected_words:
-                raise HTTPException(
-                    status_code=404, 
-                    detail="No vocabulary words available"
-                )
+                raise HTTPException(status_code=404, detail="No vocabulary words available")
         
         selected_word = selected_words[0]
         hebrew_word = selected_word.hebrew
         english_meaning = selected_word.english
         
-        # Decide which text to speak & return based on lang
         if lang == "en":
-            # Use the English meaning for TTS and the "word" field
             text_for_tts = f"{english_meaning}?"
             response_word = english_meaning
         else:
-            # Default: Hebrew TTS
             text_for_tts = f"{hebrew_word}?"
             response_word = hebrew_word
         
-        # Generate audio
         prompt_audio = synthesize_speech(text_for_tts, language_code=lang)
         audio_base64 = base64.b64encode(prompt_audio).decode("utf-8")
-
-        # Log what's being sent
         logger.debug(f"Selected word: {hebrew_word}, lang={lang}, tts='{text_for_tts}'")
         
-        # Build enhanced response with word metadata
         return JSONResponse({
-            "word": response_word,       # Either Hebrew or English
+            "word": response_word,
             "audio_base64": audio_base64,
-            "audio_settings": settings.AUDIO_SETTINGS,  # Include audio settings in response
+            "audio_settings": settings.AUDIO_SETTINGS,
             "metadata": {
                 "hebrew": hebrew_word,
                 "english": english_meaning,
@@ -106,7 +92,6 @@ async def next_word(
 
 @router.get("/vocabulary/categories")
 async def get_categories():
-    """Get all available word categories"""
     try:
         return JSONResponse({
             "categories": [category.value for category in WordCategory]
@@ -117,7 +102,6 @@ async def get_categories():
 
 @router.get("/vocabulary/difficulty_levels")
 async def get_difficulty_levels():
-    """Get all available difficulty levels"""
     try:
         return JSONResponse({
             "difficulty_levels": [level.value for level in DifficultyLevel]
@@ -133,12 +117,8 @@ async def get_vocabulary(
     search: Optional[str] = Query(None, description="Search by Hebrew or English text"),
     limit: int = Query(50, description="Maximum number of words to return")
 ):
-    """Get vocabulary words with optional filters"""
     try:
-        # Start with all words
         words = get_all_words()
-        
-        # Apply filters
         if category:
             try:
                 word_category = WordCategory(category)
@@ -160,7 +140,6 @@ async def get_vocabulary(
                 if search in word.hebrew.lower() or search in word.english.lower()
             ]
         
-        # Limit results and convert to dictionary
         limited_words = words[:limit]
         result = [word.to_dict() for word in limited_words]
         
@@ -175,21 +154,16 @@ async def get_vocabulary(
 
 @router.get("/vocabulary/stats")
 async def get_vocabulary_stats():
-    """Get vocabulary statistics by category and difficulty"""
     try:
         all_words = get_all_words()
-        
-        # Count words by category
         category_counts = {}
         for category in WordCategory:
             category_counts[category.value] = len([w for w in all_words if w.category == category])
             
-        # Count words by difficulty
         difficulty_counts = {}
         for difficulty in DifficultyLevel:
             difficulty_counts[difficulty.value] = len([w for w in all_words if w.difficulty == difficulty])
             
-        # Count words by category and difficulty combined
         combined_counts = {}
         for category in WordCategory:
             combined_counts[category.value] = {}
@@ -212,35 +186,43 @@ async def get_vocabulary_stats():
 
 @router.post("/check_answer/{word:path}")
 async def check_answer(word: str, file: UploadFile = File(...)):
+    temp_files = []  # Track temp files for cleanup
     try:
-        # Use file.filename extension if available; otherwise, map from MIME type.
-        def get_extension(file: UploadFile) -> str:
-            if file.filename and '.' in file.filename:
-                return os.path.splitext(file.filename)[1]
-            mime_to_ext = {
-                "audio/flac": ".flac",
-                "audio/x-flac": ".flac",
-                "audio/mp4": ".mp4",  # Changed from .m4a to .mp4
-                "audio/m4a": ".m4a",
-                "audio/mpeg": ".mp3",
-                "audio/mp3": ".mp3",
-                "audio/mpga": ".mpga",
-                "audio/ogg": ".ogg",
-                "audio/oga": ".oga",
-                "audio/wav": ".wav",
-                "audio/wemb": ".wemb"
-            }
-            return mime_to_ext.get(file.content_type, ".webm")
+        logger.debug(f"Received audio file: {file.filename}, content_type: {file.content_type}")
         
-        ext = get_extension(file)
-        
-        # Save the uploaded file with the determined extension.
-        with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as temp_file:
+        # Save the original audio file
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".tmp") as temp_file:
             temp_filename = temp_file.name
+            temp_files.append(temp_filename)
             content = await file.read()
             temp_file.write(content)
         
-        # Find the word in our vocabulary.
+        # Determine audio format from content_type or filename
+        audio_format = None
+        if file.content_type:
+            audio_format = file.content_type.split('/')[-1]
+        else:
+            if file.filename:
+                _, ext = os.path.splitext(file.filename)
+                if ext:
+                    audio_format = ext[1:].lower()
+        logger.debug(f"Detected audio format: {audio_format}")
+        
+        whisper_compatible_formats = ['flac', 'm4a', 'mp3', 'mpeg', 'mpga', 'oga', 'ogg', 'wav', 'webm']
+        transcription_file = temp_filename
+        
+        if audio_format not in whisper_compatible_formats or not audio_format:
+            try:
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as wav_file:
+                    converted_filename = wav_file.name
+                    temp_files.append(converted_filename)
+                audio = AudioSegment.from_file(temp_filename)
+                audio.export(converted_filename, format="wav")
+                logger.debug(f"Converted audio to WAV: {converted_filename}")
+                transcription_file = converted_filename
+            except Exception as conversion_error:
+                logger.error(f"Error converting audio: {conversion_error}")
+        
         all_words = get_all_words()
         word_obj = next((w for w in all_words if w.hebrew == word or w.english == word), None)
         
@@ -259,14 +241,20 @@ async def check_answer(word: str, file: UploadFile = File(...)):
                 correct_answer = REV_VOCAB[word]
                 transcription_language = "he"
             else:
-                os.unlink(temp_filename)
+                for temp_file in temp_files:
+                    try:
+                        os.unlink(temp_file)
+                    except:
+                        pass
                 raise HTTPException(status_code=400, detail=f"Unknown word: {word}")
         
-        # Transcribe the audio.
-        user_response = transcribe_audio(temp_filename, language=transcription_language)
-        os.unlink(temp_filename)
-
-        # Normalize text and compute similarity.
+        try:
+            logger.debug(f"Transcribing audio file: {transcription_file}, language: {transcription_language}")
+            user_response = transcribe_audio(transcription_file, language=transcription_language)
+        except Exception as e:
+            logger.error(f"Transcription error: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Failed to transcribe audio: {str(e)}")
+        
         import re
         def normalize_text(text):
             return re.sub(r"[^\w\s]", "", text).strip().lower()
@@ -295,12 +283,18 @@ async def check_answer(word: str, file: UploadFile = File(...)):
             }
         return JSONResponse(response)
     except Exception as e:
-        logger.exception("Error in check_answer")
+        logger.exception(f"Error in check_answer: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        for temp_file in temp_files:
+            try:
+                if os.path.exists(temp_file):
+                    os.unlink(temp_file)
+            except Exception as e:
+                logger.error(f"Error deleting temporary file {temp_file}: {str(e)}")
 
 @router.get("/get_audio_settings")
 async def get_audio_settings():
-    """Return the current audio recording settings"""
     try:
         return JSONResponse(settings.AUDIO_SETTINGS)
     except Exception as e:
@@ -309,47 +303,30 @@ async def get_audio_settings():
 
 @router.get("/get_pronunciation")
 async def get_pronunciation(word: str = Query(...), lang: str = Query("iw")):
-    """Get pronunciation audio for a specific word"""
     try:
         logger.debug(f"Pronunciation request received for word: '{word}', language: '{lang}'")
-        
-        # For Hebrew words that need English pronunciation
         if lang == "en":
-            # Check if this is a Hebrew word in our vocabulary
             if word in VOCAB:
-                # Get the English translation
                 english_word = VOCAB[word]
                 logger.debug(f"Found Hebrew word in vocabulary, translating to English: '{english_word}'")
-                
-                # Generate audio with English voice saying the English word
                 pronunciation_audio = synthesize_speech(english_word, language_code="en")
                 logger.debug(f"Generated ENGLISH pronunciation for '{english_word}'")
             else:
-                # If not in vocabulary, try direct pronunciation (but this may not work well)
                 logger.debug(f"Word not found in Hebrew vocabulary, trying direct pronunciation")
                 pronunciation_audio = synthesize_speech(word, language_code="en")
                 logger.debug(f"Generated direct English pronunciation for '{word}'")
-        
-        # For English words that need Hebrew pronunciation
         elif lang == "iw":
-            # Check if this is an English word in our reverse vocabulary
             if word in REV_VOCAB:
-                # Get the Hebrew translation
                 hebrew_word = REV_VOCAB[word]
                 logger.debug(f"Found English word in vocabulary, translating to Hebrew: '{hebrew_word}'")
-                
-                # Generate audio with Hebrew voice saying the Hebrew word
                 pronunciation_audio = synthesize_speech(hebrew_word, language_code="iw")
                 logger.debug(f"Generated HEBREW pronunciation for '{hebrew_word}'")
             else:
-                # If not in vocabulary, try direct pronunciation
                 logger.debug(f"Word not found in English vocabulary, trying direct pronunciation")
                 pronunciation_audio = synthesize_speech(word, language_code="iw")
                 logger.debug(f"Generated direct Hebrew pronunciation for '{word}'")
         
-        # Return the audio as base64
         audio_base64 = base64.b64encode(pronunciation_audio).decode("utf-8")
-        
         return JSONResponse({
             "word": word,
             "audio_base64": audio_base64
@@ -357,3 +334,4 @@ async def get_pronunciation(word: str = Query(...), lang: str = Query("iw")):
     except Exception as e:
         logger.exception(f"Error in get_pronunciation for word: {word}, lang: {lang}")
         raise HTTPException(status_code=500, detail=str(e))
+
