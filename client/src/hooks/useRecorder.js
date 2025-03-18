@@ -6,8 +6,7 @@ import * as api from '../services/api';
 
 // Helper functions added near the top
 const forceFileExtension = (blob, extension) => {
-  const fileExtension = extension.startsWith('.') ? extension : `.${extension}`;
-  const newType = `audio/${extension}`;
+  const newType = `audio/${extension.startsWith('.') ? extension.slice(1) : extension}`;
   return new Blob([blob], { type: newType });
 };
 
