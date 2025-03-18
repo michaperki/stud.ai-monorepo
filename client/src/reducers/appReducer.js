@@ -1,4 +1,3 @@
-
 // src/reducers/appReducer.js
 
 // Helper function to get hint for a word based on attempt count
@@ -12,6 +11,17 @@ export function getHintForWord(englishWord, attemptCount) {
   
   return `Hint: ${first}${middle}${last}`;
 }
+
+// Load session history from localStorage if available
+const loadSessionHistory = () => {
+  try {
+    const savedHistory = localStorage.getItem('sessionHistory');
+    return savedHistory ? JSON.parse(savedHistory) : [];
+  } catch (e) {
+    console.error('Error loading session history from localStorage:', e);
+    return [];
+  }
+};
 
 // Initial state
 export const initialState = {
@@ -56,7 +66,7 @@ export const initialState = {
   // New properties for UI improvements
   enhancedHint: null, // For the new progressive hint system
   theme: 'light', // For theme toggling
-  sessionHistory: [], // For tracking learning progress
+  sessionHistory: loadSessionHistory(), // For tracking learning progress - load from localStorage
   categoryStats: {}, // For category-specific statistics
 };
 
@@ -178,41 +188,56 @@ export function appReducer(state, action) {
       };
 
     case 'END_SESSION':
-      const sessionData = {
-        date: new Date().toISOString(),
-        duration: state.session.time,
-        totalWords: state.stats.totalWords,
-        incorrectAttempts: state.stats.incorrectAttempts,
-        accuracy: state.stats.totalWords + state.stats.incorrectAttempts > 0
-          ? Math.round((state.stats.totalWords / (state.stats.totalWords + state.stats.incorrectAttempts)) * 100)
-          : 100,
-        wordsPerMinute: state.session.time > 60
-          ? (state.stats.totalWords / (state.session.time / 60)).toFixed(1)
-          : state.stats.totalWords,
-      };
-
       try {
-        const savedSessions = JSON.parse(localStorage.getItem('sessionHistory') || '[]');
-        savedSessions.push(sessionData);
-        localStorage.setItem('sessionHistory', JSON.stringify(savedSessions));
-      } catch (e) {
-        console.error('Error saving session history:', e);
-      }
+        const sessionData = {
+          date: new Date().toISOString(),
+          duration: state.session.time,
+          totalWords: state.stats.totalWords,
+          incorrectAttempts: state.stats.incorrectAttempts,
+          accuracy: state.stats.totalWords + state.stats.incorrectAttempts > 0
+            ? Math.round((state.stats.totalWords / (state.stats.totalWords + state.stats.incorrectAttempts)) * 100)
+            : 100,
+          wordsPerMinute: state.session.time > 60
+            ? (state.stats.totalWords / (state.session.time / 60)).toFixed(1)
+            : state.stats.totalWords,
+        };
 
-      return {
-        ...state,
-        session: {
-          ...state.session,
-          active: false,
-          paused: false,
-          endTime: new Date().toISOString(),
-        },
-        currentWord: '',
-        ttsAudio: null,
-        recordingState: 'idle',
-        feedback: null,
-        sessionHistory: [...state.sessionHistory, sessionData]
-      };
+        // Update session history in state
+        const updatedSessionHistory = [...state.sessionHistory, sessionData];
+        
+        return {
+          ...state,
+          session: {
+            ...state.session,
+            active: false,
+            paused: false,
+            endTime: new Date().toISOString(),
+          },
+          currentWord: '',
+          ttsAudio: null,
+          recordingState: 'idle',
+          feedback: null,
+          sessionHistory: updatedSessionHistory,
+          enhancedHint: null,
+        };
+      } catch (error) {
+        console.error('Error in END_SESSION reducer:', error);
+        // Return a safe fallback state even if there's an error
+        return {
+          ...state,
+          session: {
+            ...state.session,
+            active: false,
+            paused: false,
+            endTime: new Date().toISOString(),
+          },
+          currentWord: '',
+          ttsAudio: null,
+          recordingState: 'idle',
+          feedback: null,
+          enhancedHint: null,
+        };
+      }
 
     case 'PAUSE_SESSION':
       return {
@@ -316,9 +341,26 @@ export function appReducer(state, action) {
       };
 
     case 'ADD_SESSION_HISTORY':
+      const newHistory = [...state.sessionHistory, action.payload];
+      try {
+        localStorage.setItem('sessionHistory', JSON.stringify(newHistory));
+      } catch (e) {
+        console.error('Error saving session history to localStorage:', e);
+      }
       return {
         ...state,
-        sessionHistory: [...state.sessionHistory, action.payload]
+        sessionHistory: newHistory
+      };
+
+    case 'SET_SESSION_HISTORY':
+      try {
+        localStorage.setItem('sessionHistory', JSON.stringify(action.payload));
+      } catch (e) {
+        console.error('Error saving session history to localStorage:', e);
+      }
+      return {
+        ...state,
+        sessionHistory: action.payload
       };
 
     case 'SET_CATEGORY_STATS':
@@ -361,4 +403,3 @@ export function appReducer(state, action) {
       return state;
   }
 }
-
