@@ -213,8 +213,24 @@ async def get_vocabulary_stats():
 @router.post("/check_answer/{word:path}")
 async def check_answer(word: str, file: UploadFile = File(...)):
     try:
-        # Save audio file
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as temp_file:
+        # Determine file extension based on MIME type
+        mime_to_ext = {
+            "audio/flac": ".flac",
+            "audio/x-flac": ".flac",
+            "audio/mp4": ".m4a",
+            "audio/m4a": ".m4a",
+            "audio/mpeg": ".mp3",
+            "audio/mp3": ".mp3",
+            "audio/mpga": ".mpga",
+            "audio/ogg": ".ogg",
+            "audio/oga": ".oga",
+            "audio/wav": ".wav",
+            "audio/wemb": ".wemb"
+        }
+        ext = mime_to_ext.get(file.content_type, ".webm")
+        
+        # Save audio file with the determined extension
+        with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as temp_file:
             temp_filename = temp_file.name
             content = await file.read()
             temp_file.write(content)
@@ -225,15 +241,12 @@ async def check_answer(word: str, file: UploadFile = File(...)):
         
         if word_obj:
             if word == word_obj.hebrew:
-                # Hebrew word provided, expecting English answer
                 correct_answer = word_obj.english
                 transcription_language = "en"
             else:
-                # English word provided, expecting Hebrew answer
                 correct_answer = word_obj.hebrew
                 transcription_language = "he"
         else:
-            # Fall back to the legacy dictionary lookup
             if word in VOCAB:
                 correct_answer = VOCAB[word]
                 transcription_language = "en"
@@ -248,6 +261,39 @@ async def check_answer(word: str, file: UploadFile = File(...)):
         user_response = transcribe_audio(temp_filename, language=transcription_language)
         os.unlink(temp_filename)
 
+        # Normalize texts and calculate similarity
+        import re
+        def normalize_text(text):
+            return re.sub(r"[^\w\s]", "", text).strip().lower()
+        
+        normalized_user_response = normalize_text(user_response)
+        normalized_correct_answer = normalize_text(correct_answer)
+        score = similarity(normalized_user_response, normalized_correct_answer)
+        is_correct = score > 0.7
+        pronunciation_score = int(score * 100)
+        
+        response = {
+            "user_response": user_response,
+            "is_correct": is_correct,
+            "correct_answer": correct_answer,
+            "pronunciation_score": pronunciation_score
+        }
+        
+        if word_obj:
+            response["metadata"] = {
+                "hebrew": word_obj.hebrew,
+                "english": word_obj.english,
+                "category": word_obj.category,
+                "difficulty": word_obj.difficulty,
+                "pronunciation_guide": word_obj.pronunciation_guide,
+                "example_sentence": word_obj.example_sentence
+            }
+
+        return JSONResponse(response)
+
+    except Exception as e:
+        logger.exception("Error in check_answer")
+        raise HTTPException(status_code=500, detail=str(e))
         # Normalize texts by removing punctuation to avoid minor differences (e.g., trailing '?')
         import re
         def normalize_text(text):
