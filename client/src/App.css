@@ -1,5 +1,7 @@
 /* src/App.css */
+
 :root {
+  /* Light theme (default) */
   --primary-color: #4361ee;
   --primary-light: #5b7af9;
   --primary-dark: #3a53cc;
@@ -14,7 +16,66 @@
   --border-radius: 12px;
   --shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   --transition: all 0.3s ease;
+  --visualizer-bg: #1a1a2e;
 }
+
+/* Dark theme */
+[data-theme='dark'] {
+  --primary-color: #5b7af9;
+  --primary-light: #7994FF;
+  --primary-dark: #3A53CC;
+  --secondary-color: #a4aec3;
+  --danger-color: #FF6B95;
+  --success-color: #0AECB1;
+  --warning-color: #FFDE8D;
+  --background-color: #121212;
+  --card-color: #1e1e1e;
+  --text-color: #f8f9fa;
+  --text-light: #bdc3c7;
+  --shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --visualizer-bg: #0f0f1e;
+}
+
+/* Smooth transitions when switching themes */
+body, input, button, select, textarea {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Updated styles for dark mode */
+[data-theme='dark'] .audio-visualizer {
+  background-color: var(--visualizer-bg);
+}
+
+[data-theme='dark'] .volume-meter {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme='dark'] .history-item:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme='dark'] .settings-info {
+  background-color: rgba(91, 122, 249, 0.1);
+}
+
+[data-theme='dark'] .modal-content {
+  background-color: var(--card-color);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+[data-theme='dark'] .welcome-screen p {
+  color: var(--text-light);
+}
+
+[data-theme='dark'] .app-title {
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: brightness(1.2);
+}
+
+/* Add specific dark theme overrides for other components as needed */
 
 body {
   margin: 0;
@@ -49,6 +110,7 @@ body {
   font-weight: 700;
   margin: 0;
   background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+  background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }

@@ -1,3 +1,4 @@
+
 // src/reducers/appReducer.js
 
 // Helper function to get hint for a word based on attempt count
@@ -51,6 +52,12 @@ export const initialState = {
     difficultyLevel: '', // New setting for difficulty level
   },
   wordMetadata: null, // Store metadata for the current word
+
+  // New properties for UI improvements
+  enhancedHint: null, // For the new progressive hint system
+  theme: 'light', // For theme toggling
+  sessionHistory: [], // For tracking learning progress
+  categoryStats: {}, // For category-specific statistics
 };
 
 // Reducer function
@@ -65,25 +72,25 @@ export function appReducer(state, action) {
         lastWord: action.payload,
         hintText: null, // Reset hint when new word is set
       };
-      
+
     case 'SET_TTS_AUDIO':
       return { 
         ...state, 
         ttsAudio: action.payload 
       };
-      
+
     case 'SET_LOADING':
       return { 
         ...state, 
         loading: action.payload 
       };
-      
+
     case 'SET_ERROR':
       return { 
         ...state, 
         error: action.payload 
       };
-      
+
     case 'SET_MICROPHONE_ERROR':
       return {
         ...state,
@@ -92,50 +99,46 @@ export function appReducer(state, action) {
           message: action.payload.message || state.microphoneError.message,
         }
       };
-      
+
     case 'SET_PRACTICE_WITHOUT_MIC':
       return {
         ...state,
         practiceWithoutMic: action.payload,
-        // Reset the recording state when switching to practice without mic
         recordingState: action.payload ? 'idle' : state.recordingState,
       };
-      
+
     case 'SET_RECORDING_STATE':
       return { 
         ...state, 
         recordingState: action.payload 
       };
-      
+
     case 'SET_FEEDBACK':
-      // Update hint if feedback contains correct answer and is incorrect
-      const newHint = !action.payload.is_correct && action.payload.correct_answer 
-        ? getHintForWord(action.payload.correct_answer, state.attemptCount + 1) 
+      const newHint = !action.payload.is_correct && action.payload.correct_answer
+        ? getHintForWord(action.payload.correct_answer, state.attemptCount + 1)
         : state.hintText;
-        
       return { 
         ...state, 
         feedback: action.payload,
         hintText: newHint
       };
-      
+
     case 'ADD_HISTORY':
       return { 
         ...state, 
-        history: [action.payload, ...state.history].slice(0, 20) // Keep latest 20 items
+        history: [action.payload, ...state.history].slice(0, 20)
       };
-      
+
     case 'INCREMENT_ATTEMPTS':
       const updatedAttemptCount = state.attemptCount + 1;
       return { 
         ...state, 
         attemptCount: updatedAttemptCount,
-        // Update hint based on new attempt count and correct answer
-        hintText: state.feedback?.correct_answer 
-          ? getHintForWord(state.feedback.correct_answer, updatedAttemptCount) 
+        hintText: state.feedback?.correct_answer
+          ? getHintForWord(state.feedback.correct_answer, updatedAttemptCount)
           : state.hintText
       };
-      
+
     case 'RESET_WORD_STATE':
       return { 
         ...state, 
@@ -143,8 +146,9 @@ export function appReducer(state, action) {
         recordingState: 'idle',
         attemptCount: 0,
         hintText: null,
+        enhancedHint: null,
       };
-      
+
     case 'SET_SETTINGS':
       return {
         ...state,
@@ -153,7 +157,7 @@ export function appReducer(state, action) {
           ...action.payload,
         },
       };
-      
+
     case 'START_SESSION':
       return {
         ...state,
@@ -172,8 +176,29 @@ export function appReducer(state, action) {
         },
         history: [],
       };
-      
+
     case 'END_SESSION':
+      const sessionData = {
+        date: new Date().toISOString(),
+        duration: state.session.time,
+        totalWords: state.stats.totalWords,
+        incorrectAttempts: state.stats.incorrectAttempts,
+        accuracy: state.stats.totalWords + state.stats.incorrectAttempts > 0
+          ? Math.round((state.stats.totalWords / (state.stats.totalWords + state.stats.incorrectAttempts)) * 100)
+          : 100,
+        wordsPerMinute: state.session.time > 60
+          ? (state.stats.totalWords / (state.session.time / 60)).toFixed(1)
+          : state.stats.totalWords,
+      };
+
+      try {
+        const savedSessions = JSON.parse(localStorage.getItem('sessionHistory') || '[]');
+        savedSessions.push(sessionData);
+        localStorage.setItem('sessionHistory', JSON.stringify(savedSessions));
+      } catch (e) {
+        console.error('Error saving session history:', e);
+      }
+
       return {
         ...state,
         session: {
@@ -186,8 +211,9 @@ export function appReducer(state, action) {
         ttsAudio: null,
         recordingState: 'idle',
         feedback: null,
+        sessionHistory: [...state.sessionHistory, sessionData]
       };
-      
+
     case 'PAUSE_SESSION':
       return {
         ...state,
@@ -196,7 +222,7 @@ export function appReducer(state, action) {
           paused: true,
         },
       };
-      
+
     case 'RESUME_SESSION':
       return {
         ...state,
@@ -205,7 +231,7 @@ export function appReducer(state, action) {
           paused: false,
         },
       };
-      
+
     case 'INCREMENT_SESSION_TIME':
       return {
         ...state,
@@ -214,22 +240,51 @@ export function appReducer(state, action) {
           time: state.session.time + 1,
         },
       };
-      
+
     case 'UPDATE_STATS':
+      const updatedStats = {
+        ...state.stats,
+        totalWords: action.payload.isCorrect 
+          ? state.stats.totalWords + 1 
+          : state.stats.totalWords,
+        correctWords: action.payload.isCorrect 
+          ? state.stats.correctWords + 1 
+          : state.stats.correctWords,
+        incorrectAttempts: !action.payload.isCorrect 
+          ? state.stats.incorrectAttempts + 1 
+          : state.stats.incorrectAttempts,
+      };
+
+      let updatedCategoryStats = state.categoryStats;
+      if (state.wordMetadata && state.wordMetadata.category) {
+        const category = state.wordMetadata.category;
+        const currentCatStats = state.categoryStats[category] || {
+          total: 0,
+          correct: 0,
+          mastery: 0,
+        };
+        updatedCategoryStats = {
+          ...state.categoryStats,
+          [category]: {
+            ...currentCatStats,
+            total: currentCatStats.total + 1,
+            correct: action.payload.isCorrect 
+              ? currentCatStats.correct + 1 
+              : currentCatStats.correct,
+            mastery: Math.round(
+              ((action.payload.isCorrect 
+                ? currentCatStats.correct + 1 
+                : currentCatStats.correct) / 
+                (currentCatStats.total + 1)) * 100
+            )
+          }
+        };
+      }
+      
       return {
         ...state,
-        stats: {
-          ...state.stats,
-          totalWords: action.payload.isCorrect 
-            ? state.stats.totalWords + 1 
-            : state.stats.totalWords,
-          correctWords: action.payload.isCorrect 
-            ? state.stats.correctWords + 1 
-            : state.stats.correctWords,
-          incorrectAttempts: !action.payload.isCorrect 
-            ? state.stats.incorrectAttempts + 1 
-            : state.stats.incorrectAttempts,
-        },
+        stats: updatedStats,
+        categoryStats: updatedCategoryStats
       };
 
     case 'UPDATE_FEEDBACK_AUDIO':
@@ -240,13 +295,70 @@ export function appReducer(state, action) {
           correct_pronunciation_audio: action.payload
         }
       };
+
     case 'SET_WORD_METADATA':
       return {
         ...state,
         wordMetadata: action.payload
       };
-      
+
+    // New cases for UI improvements
+    case 'SET_ENHANCED_HINT':
+      return {
+        ...state,
+        enhancedHint: action.payload
+      };
+
+    case 'SET_THEME':
+      return {
+        ...state,
+        theme: action.payload
+      };
+
+    case 'ADD_SESSION_HISTORY':
+      return {
+        ...state,
+        sessionHistory: [...state.sessionHistory, action.payload]
+      };
+
+    case 'SET_CATEGORY_STATS':
+      return {
+        ...state,
+        categoryStats: action.payload
+      };
+
+    case 'UPDATE_CATEGORY_STATS': {
+      const { category, isCorrect } = action.payload;
+      if (!category) return state;
+      const currentCategoryStats = state.categoryStats[category] || {
+        total: 0,
+        correct: 0,
+        mastery: 0
+      };
+      const updatedCategoryStats = {
+        ...currentCategoryStats,
+        total: currentCategoryStats.total + 1,
+        correct: isCorrect 
+          ? currentCategoryStats.correct + 1 
+          : currentCategoryStats.correct,
+        mastery: Math.round(
+          ((isCorrect 
+            ? currentCategoryStats.correct + 1 
+            : currentCategoryStats.correct) / 
+            (currentCategoryStats.total + 1)) * 100
+        )
+      };
+      return {
+        ...state,
+        categoryStats: {
+          ...state.categoryStats,
+          [category]: updatedCategoryStats
+        }
+      };
+    }
+
     default:
       return state;
   }
 }
+
