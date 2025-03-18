@@ -4,10 +4,10 @@
 from fastapi import APIRouter, HTTPException, UploadFile, File, Query, Response
 from fastapi.responses import JSONResponse
 import random, base64, os, traceback, tempfile, logging
-import soundfile as sf
-from typing import List, Optional
 import mimetypes
+from pathlib import Path
 
+import soundfile as sf
 from pydub import AudioSegment
 
 from core.audio import synthesize_speech
@@ -18,12 +18,47 @@ from data.vocab import WordCategory, DifficultyLevel, VocabWord, get_all_words, 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
+# --- Added function for improved audio format detection ---
+import magic  # Ensure python-magic or python-magic-bin is installed
+
+def determine_audio_format(file_content, filename=None, content_type=None):
+    """
+    Determine the audio format using multiple methods:
+    1. Check content_type
+    2. Try to detect from the file extension
+    3. Use python-magic to detect the file type from its content
+    """
+    format_from_content_type = None
+    format_from_extension = None
+    format_from_magic = None
+
+    if content_type:
+        format_from_content_type = content_type.split('/')[-1].lower()
+        if format_from_content_type == 'mp4':
+            format_from_content_type = 'm4a'
+    
+    if filename:
+        _, ext = os.path.splitext(filename)
+        if ext:
+            format_from_extension = ext[1:].lower()
+    
+    try:
+        mime = magic.Magic(mime=True)
+        detected_mime = mime.from_buffer(file_content[:4096])
+        if detected_mime.startswith('audio/'):
+            format_from_magic = detected_mime.split('/')[-1].lower()
+    except Exception as e:
+        logger.error(f"Error using magic to detect file type: {e}")
+    
+    logger.debug(f"Format detection: content_type={format_from_content_type}, extension={format_from_extension}, magic={format_from_magic}")
+    return format_from_magic or format_from_extension or format_from_content_type
+
 @router.get("/next_word")
 async def next_word(
     lang: str = Query("iw"),
-    category: Optional[str] = Query(None, description="Filter by word category (noun, verb, etc.)"),
-    difficulty: Optional[str] = Query(None, description="Filter by difficulty level (beginner, intermediate, advanced)"),
-    exclude: Optional[str] = Query(None, description="Comma-separated list of Hebrew words to exclude")
+    category: str = Query(None, description="Filter by word category (noun, verb, etc.)"),
+    difficulty: str = Query(None, description="Filter by difficulty level (beginner, intermediate, advanced)"),
+    exclude: str = Query(None, description="Comma-separated list of Hebrew words to exclude")
 ):
     try:
         word_category = None
@@ -112,9 +147,9 @@ async def get_difficulty_levels():
 
 @router.get("/vocabulary")
 async def get_vocabulary(
-    category: Optional[str] = Query(None, description="Filter by word category"),
-    difficulty: Optional[str] = Query(None, description="Filter by difficulty level"),
-    search: Optional[str] = Query(None, description="Search by Hebrew or English text"),
+    category: str = Query(None, description="Filter by word category"),
+    difficulty: str = Query(None, description="Filter by difficulty level"),
+    search: str = Query(None, description="Search by Hebrew or English text"),
     limit: int = Query(50, description="Maximum number of words to return")
 ):
     try:
@@ -190,35 +225,45 @@ async def check_answer(word: str, file: UploadFile = File(...)):
     try:
         logger.debug(f"Received audio file: {file.filename}, content_type: {file.content_type}")
         
-        # Save the original audio file
+        content = await file.read()
         with tempfile.NamedTemporaryFile(delete=False, suffix=".tmp") as temp_file:
             temp_filename = temp_file.name
             temp_files.append(temp_filename)
-            content = await file.read()
             temp_file.write(content)
         
-        # Determine audio format from content_type or filename
-        audio_format = None
-        if file.content_type:
-            audio_format = file.content_type.split('/')[-1]
-        else:
-            if file.filename:
-                _, ext = os.path.splitext(file.filename)
-                if ext:
-                    audio_format = ext[1:].lower()
+        # Use the improved audio format detection
+        audio_format = determine_audio_format(content, file.filename, file.content_type)
         logger.debug(f"Detected audio format: {audio_format}")
         
-        whisper_compatible_formats = ['flac', 'm4a', 'mp3', 'mpeg', 'mpga', 'oga', 'ogg', 'wav', 'webm']
+        whisper_compatible_formats = ['flac', 'm4a', 'mp3', 'mp4', 'mpeg', 'mpga', 'oga', 'ogg', 'wav', 'webm']
         transcription_file = temp_filename
         
-        if audio_format not in whisper_compatible_formats or not audio_format:
+        if not audio_format or audio_format not in whisper_compatible_formats:
+            logger.debug(f"Converting audio from {audio_format} to a compatible format")
             try:
-                with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as wav_file:
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as wav_file:
                     converted_filename = wav_file.name
                     temp_files.append(converted_filename)
-                audio = AudioSegment.from_file(temp_filename)
-                audio.export(converted_filename, format="wav")
-                logger.debug(f"Converted audio to WAV: {converted_filename}")
+                
+                import subprocess
+                cmd = [
+                    "ffmpeg", "-y", "-i", temp_filename, 
+                    "-acodec", "libmp3lame", 
+                    "-ab", "128k", 
+                    "-ac", "1",
+                    "-ar", "44100",
+                    converted_filename
+                ]
+                process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                stdout, stderr = process.communicate()
+                
+                if process.returncode != 0:
+                    logger.error(f"FFmpeg conversion failed: {stderr.decode()}")
+                    from pydub import AudioSegment
+                    audio = AudioSegment.from_file(temp_filename)
+                    audio.export(converted_filename, format="mp3")
+                
+                logger.debug(f"Converted audio to MP3: {converted_filename}")
                 transcription_file = converted_filename
             except Exception as conversion_error:
                 logger.error(f"Error converting audio: {conversion_error}")
@@ -334,4 +379,3 @@ async def get_pronunciation(word: str = Query(...), lang: str = Query("iw")):
     except Exception as e:
         logger.exception(f"Error in get_pronunciation for word: {word}, lang: {lang}")
         raise HTTPException(status_code=500, detail=str(e))
-
