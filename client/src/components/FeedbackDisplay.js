@@ -10,6 +10,7 @@ import {
   BsVolumeUp,
   BsFileEarmarkMusic,
   BsPauseFill,
+  BsBug
 } from 'react-icons/bs';
 
 const FeedbackDisplay = ({ 
@@ -19,11 +20,11 @@ const FeedbackDisplay = ({
   sessionPaused, 
   onPlayCorrectPronunciation,
   autoAdvanceDelay = 5,
-  userRecordingUrl = null // New prop for user's recording
+  userRecordingUrl = null
 }) => {
   // State for the countdown value.
   const [countdown, setCountdown] = useState(null);
-  // activeFeedbackKey holds a stable identifier (here, the user_response) for the current correct feedback.
+  // activeFeedbackKey holds a stable identifier for the current correct feedback.
   const [activeFeedbackKey, setActiveFeedbackKey] = useState(null);
   // Ref for the timer so we can prevent re‑starting it.
   const countdownTimerRef = useRef(null);
@@ -33,10 +34,41 @@ const FeedbackDisplay = ({
   const audioRef = useRef(null);
   // State to track if user recording is playing
   const [isPlayingUserRecording, setIsPlayingUserRecording] = useState(false);
+  // Debug info
+  const [debugInfo, setDebugInfo] = useState('');
+  // State to track if we need fallback HTML5 audio
+  const [useHtmlAudio, setUseHtmlAudio] = useState(false);
+  // Is mobile device
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    // Detect if running on mobile
+    const checkMobile = () => {
+      const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+      const mobileRegex = /android|iphone|ipad|ipod|blackberry|iemobile|opera mini/i;
+      setIsMobile(mobileRegex.test(userAgent.toLowerCase()));
+      
+      // On iOS and some Android devices, let's default to HTML audio
+      if (mobileRegex.test(userAgent.toLowerCase())) {
+        setUseHtmlAudio(true);
+        updateDebug('Mobile device detected, using HTML audio element');
+      }
+    };
+    
+    checkMobile();
+  }, []);
 
   useEffect(() => {
     onNextWordRef.current = onNextWord;
   }, [onNextWord]);
+
+  const updateDebug = (message) => {
+    setDebugInfo(prev => {
+      const newDebug = `${new Date().toISOString().substring(11, 19)}: ${message}\n${prev}`;
+      // Keep debug info limited to prevent it from growing too large
+      return newDebug.split('\n').slice(0, 10).join('\n');
+    });
+  };
 
   // Initialize audio element
   useEffect(() => {
@@ -44,9 +76,25 @@ const FeedbackDisplay = ({
       audioRef.current = new Audio();
       
       // Add event listeners to handle playback state
-      audioRef.current.addEventListener('play', () => setIsPlayingUserRecording(true));
-      audioRef.current.addEventListener('pause', () => setIsPlayingUserRecording(false));
-      audioRef.current.addEventListener('ended', () => setIsPlayingUserRecording(false));
+      audioRef.current.addEventListener('play', () => {
+        setIsPlayingUserRecording(true);
+        updateDebug('Audio started playing');
+      });
+      
+      audioRef.current.addEventListener('pause', () => {
+        setIsPlayingUserRecording(false);
+        updateDebug('Audio paused');
+      });
+      
+      audioRef.current.addEventListener('ended', () => {
+        setIsPlayingUserRecording(false);
+        updateDebug('Audio playback ended');
+      });
+      
+      audioRef.current.addEventListener('error', (e) => {
+        updateDebug(`Audio error: ${e.target.error ? e.target.error.message : 'Unknown error'}`);
+        setIsPlayingUserRecording(false);
+      });
     }
     
     return () => {
@@ -62,14 +110,21 @@ const FeedbackDisplay = ({
   // Update audio source when userRecordingUrl changes
   useEffect(() => {
     if (audioRef.current && userRecordingUrl) {
-      audioRef.current.src = userRecordingUrl;
+      try {
+        audioRef.current.src = userRecordingUrl;
+        updateDebug(`Set audio source: ${userRecordingUrl.substring(0, 30)}...`);
+        
+        // For mobile Safari, we need to load the audio
+        audioRef.current.load();
+      } catch (error) {
+        updateDebug(`Error setting audio source: ${error.message}`);
+      }
     }
   }, [userRecordingUrl]);
 
   // Cleanup function for the timer.
   const cleanupTimer = () => {
     if (countdownTimerRef.current) {
-      console.log('[Countdown] Clearing timer.');
       clearInterval(countdownTimerRef.current);
       countdownTimerRef.current = null;
     }
@@ -77,41 +132,33 @@ const FeedbackDisplay = ({
 
   // Monitor feedback changes and update the activeFeedbackKey.
   useEffect(() => {
-    console.log('[Feedback Monitor] New feedback received:', feedback);
     if (feedback && feedback.is_correct) {
       if (activeFeedbackKey !== feedback.user_response) {
-        console.log('[Feedback Monitor] New correct feedback detected. Setting key:', feedback.user_response);
         setActiveFeedbackKey(feedback.user_response);
       }
     } else {
       if (activeFeedbackKey !== null) {
-        console.log('[Feedback Monitor] Clearing active feedback key.');
+        setActiveFeedbackKey(null);
       }
-      setActiveFeedbackKey(null);
     }
   }, [feedback, activeFeedbackKey]);
 
   // Countdown effect: start timer only when there is an active correct feedback.
   useEffect(() => {
     if (!activeFeedbackKey || sessionPaused || autoAdvanceDelay <= 0) {
-      console.log('[Countdown Effect] Conditions not met. activeFeedbackKey:', activeFeedbackKey, 'sessionPaused:', sessionPaused, 'autoAdvanceDelay:', autoAdvanceDelay);
       cleanupTimer();
       setCountdown(null);
       return;
     }
     // If a timer is already running, do not restart it.
     if (countdownTimerRef.current) {
-      console.log('[Countdown Effect] Timer already running for key:', activeFeedbackKey);
       return;
     }
-    console.log('[Countdown Effect] Starting countdown for key:', activeFeedbackKey);
     setCountdown(autoAdvanceDelay);
     countdownTimerRef.current = setInterval(() => {
       setCountdown(prev => {
-        console.log('[Countdown Interval] Current count:', prev);
         if (prev <= 1) {
           cleanupTimer();
-          console.log('[Countdown Interval] Countdown complete. Calling onNextWord.');
           onNextWordRef.current();
           return null;
         }
@@ -122,42 +169,52 @@ const FeedbackDisplay = ({
   }, [activeFeedbackKey, sessionPaused, autoAdvanceDelay]);
 
   const cancelAutoAdvance = () => {
-    console.log('[Cancel] User cancelled auto-advance.');
     cleanupTimer();
     setCountdown(null);
   };
 
   // Function to play/pause user's recording
   const toggleUserRecording = () => {
-    if (!audioRef.current || !userRecordingUrl) {
-      console.error('No user recording available to play');
+    if (!userRecordingUrl) {
+      updateDebug('No recording URL available');
       return;
     }
 
     try {
       if (isPlayingUserRecording) {
-        audioRef.current.pause();
-      } else {
-        // This resets the audio to the beginning if it was already played
-        if (audioRef.current.currentTime > 0 && audioRef.current.currentTime === audioRef.current.duration) {
-          audioRef.current.currentTime = 0;
+        if (audioRef.current) {
+          audioRef.current.pause();
+          updateDebug('Paused audio playback');
         }
-        
-        // Use a promise to catch any errors during playback
-        const playPromise = audioRef.current.play();
-        
-        if (playPromise !== undefined) {
-          playPromise.catch(error => {
-            console.error('Error playing user recording:', error);
-            // Special handling for mobile autoplay restrictions
-            if (error.name === 'NotAllowedError') {
-              console.warn('Autoplay prevented by browser. This may be due to mobile browser restrictions.');
-            }
-          });
+      } else {
+        if (audioRef.current) {
+          // Reset to beginning if needed
+          if (audioRef.current.currentTime > 0 && 
+              audioRef.current.currentTime === audioRef.current.duration) {
+            audioRef.current.currentTime = 0;
+          }
+          
+          // Use a promise to catch any errors during playback
+          updateDebug('Attempting to play audio...');
+          const playPromise = audioRef.current.play();
+          
+          if (playPromise !== undefined) {
+            playPromise.catch(error => {
+              updateDebug(`Playback error: ${error.name} - ${error.message}`);
+              
+              // Special handling for mobile autoplay restrictions
+              if (error.name === 'NotAllowedError') {
+                updateDebug('Autoplay prevented by browser. Switching to HTML audio element.');
+                setUseHtmlAudio(true);
+              }
+            });
+          }
+        } else {
+          updateDebug('Audio element not initialized');
         }
       }
     } catch (error) {
-      console.error('Error toggling user recording playback:', error);
+      updateDebug(`Error in toggleUserRecording: ${error.message}`);
     }
   };
 
@@ -194,7 +251,7 @@ const FeedbackDisplay = ({
           <span className="feedback-label">Your response:</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <span className="feedback-value">{feedback.user_response}</span>
-            {userRecordingUrl && (
+            {userRecordingUrl && !useHtmlAudio && (
               <motion.button
                 className="button circle secondary"
                 onClick={toggleUserRecording}
@@ -207,6 +264,19 @@ const FeedbackDisplay = ({
                   <BsFileEarmarkMusic size={16} />
                 }
               </motion.button>
+            )}
+            {userRecordingUrl && useHtmlAudio && (
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <audio 
+                  controls 
+                  src={userRecordingUrl} 
+                  style={{ height: '24px', marginLeft: '8px' }}
+                  onPlay={() => setIsPlayingUserRecording(true)}
+                  onPause={() => setIsPlayingUserRecording(false)}
+                  onEnded={() => setIsPlayingUserRecording(false)}
+                  onError={(e) => updateDebug(`HTML audio error: ${e.target.error ? e.target.error.message : 'Unknown'}`)}
+                />
+              </div>
             )}
           </div>
         </div>
@@ -236,6 +306,41 @@ const FeedbackDisplay = ({
               />
               <span className="score-text">{feedback.pronunciation_score}%</span>
             </div>
+          </div>
+        )}
+        
+        {/* Debug toggle button */}
+        {(isMobile || debugInfo) && (
+          <div className="feedback-row" style={{ marginTop: '10px' }}>
+            <details>
+              <summary style={{ 
+                cursor: 'pointer', 
+                color: '#666', 
+                fontSize: '0.9rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px'
+              }}>
+                <BsBug /> Show debug info
+              </summary>
+              <div style={{ 
+                marginTop: '8px', 
+                padding: '8px',
+                backgroundColor: '#f5f5f5',
+                borderRadius: '4px',
+                fontSize: '0.8rem',
+                fontFamily: 'monospace',
+                whiteSpace: 'pre-wrap',
+                overflowX: 'auto'
+              }}>
+                <p>Device: {isMobile ? 'Mobile' : 'Desktop'}</p>
+                <p>Audio Mode: {useHtmlAudio ? 'HTML5 Audio Element' : 'JavaScript Audio API'}</p>
+                <p>Recording URL: {userRecordingUrl ? '✓ Available' : '✗ Not available'}</p>
+                <p>Playback state: {isPlayingUserRecording ? 'Playing' : 'Stopped'}</p>
+                <p>Log:</p>
+                {debugInfo || 'No debug info available'}
+              </div>
+            </details>
           </div>
         )}
       </div>

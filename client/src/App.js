@@ -23,6 +23,12 @@ import { appReducer, initialState } from './reducers/appReducer';
 import { SessionProvider } from './contexts/SessionContext';
 import { BsMic, BsMicMute } from 'react-icons/bs';
 
+// Utility function for checking mobile devices
+const isMobileDevice = () => {
+  const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+  return /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase());
+};
+
 export default function App() {
   // Ref to guard against duplicate next word calls.
   const nextWordCalledRef = useRef(false);
@@ -96,11 +102,33 @@ export default function App() {
     dispatch({ type: 'SET_RECORDING_STATE', payload: 'recorded' });
     dispatch({ type: 'SET_LOADING', payload: true });
     
-    // Create and save URL for the audio blob
-    const url = URL.createObjectURL(audioBlob);
-    setUserRecordingUrl(url);
-    
     try {
+      // Create compatible URL for the audio blob
+      let url;
+      
+      if (isMobileDevice()) {
+        // For mobile, use the File API to create a more compatible URL
+        const fileName = `recording-${Date.now()}.${audioBlob.type.includes('webm') ? 'webm' : 'mp3'}`;
+        const file = new File([audioBlob], fileName, { type: audioBlob.type });
+        
+        if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+          url = URL.createObjectURL(audioBlob);
+          console.log('Created iOS-compatible URL for recording');
+        } else {
+          url = URL.createObjectURL(file);
+          console.log('Created Android-compatible URL for recording');
+        }
+        
+        const audioElement = new Audio();
+        audioElement.src = url;
+        audioElement.load();
+      } else {
+        url = URL.createObjectURL(audioBlob);
+      }
+      
+      setUserRecordingUrl(url);
+      console.log(`Recording URL created: ${url.substring(0, 30)}...`);
+      
       if (!word) throw new Error('No word provided to check answer');
       const data = await api.checkAnswer(word, audioBlob);
       dispatch({
