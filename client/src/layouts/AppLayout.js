@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import ThemeToggle from '../components/ThemeToggle';
-import SessionControls from '../components/SessionControls';
+import ThemeToggle from '../components/settings/ThemeToggle';
+import SessionControls from '../components/ui/SessionControls';
 
 /**
  * Main application layout with header and content areas

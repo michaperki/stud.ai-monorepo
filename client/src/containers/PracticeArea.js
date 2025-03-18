@@ -2,12 +2,12 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Components
-import WordDisplay from '../components/WordDisplay';
-import SimpleAudioVisualizer from '../components/SimpleAudioVisualizer';
-import NoMicControls from '../components/NoMicControls';
-import StatusIndicator from '../components/StatusIndicator';
-import FeedbackDisplay from '../components/FeedbackDisplay';
-import EnhancedHintDisplay from '../components/EnhancedHintDisplay';
+import WordDisplay from '../components/word/WordDisplay';
+import AudioVisualizer from '../components/audio/AudioVisualizer';
+import NoMicControls from '../components/ui/NoMicControls';
+import StatusIndicator from '../components/feedback/StatusIndicator';
+import FeedbackDisplay from '../components/feedback/FeedbackDisplay';
+import HintDisplay from '../components/word/HintDisplay';
 
 /**
  * Practice area for active session with word display and audio controls
@@ -50,7 +50,7 @@ const PracticeArea = ({
             animate={{ opacity: 1, scale: 1 }} 
             transition={{ duration: 0.3 }}
           >
-            <SimpleAudioVisualizer
+            <AudioVisualizer
               stream={stream}
               onSilenceDetected={stopRecording}
               silenceThreshold={audioSettings.silenceThreshold}
@@ -96,8 +96,8 @@ const PracticeArea = ({
           )}
         </AnimatePresence>
         
-        {/* Enhanced hint display */}
-        {state.enhancedHint && <EnhancedHintDisplay hint={state.enhancedHint} />}
+        {/* Display hint using the consolidated HintDisplay component */}
+        {state.enhancedHint && <HintDisplay hint={state.enhancedHint} />}
       </motion.div>
     </AnimatePresence>
   );

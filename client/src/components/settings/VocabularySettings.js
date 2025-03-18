@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BsBook, BsChevronDown, BsChevronUp, BsTag, BsBarChart } from 'react-icons/bs';
-import * as api from '../services/api';
+import * as api from '../../services/api';
 
 const VocabularySettings = ({ 
   onUpdateSettings,

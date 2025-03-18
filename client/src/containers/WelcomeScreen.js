@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { BsMic, BsMicMute } from 'react-icons/bs';
-import LearningProgressChart from '../components/LearningProgressChart';
+import LearningProgressChart from '../components/history/LearningProgressChart';
 
 /**
  * Welcome screen displayed before session starts

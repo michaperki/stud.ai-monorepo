@@ -1,8 +1,11 @@
-// src/components/MicrophoneDiagnostics.js
+// src/components/audio/MicrophoneDiagnostics.js
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { BsMic, BsMicMute, BsInfoCircle, BsExclamationTriangle } from 'react-icons/bs';
 
+/**
+ * Advanced microphone diagnostics tool to help users troubleshoot audio issues
+ */
 const MicrophoneDiagnostics = ({ onClose }) => {
   const [devices, setDevices] = useState([]);
   const [selectedDevice, setSelectedDevice] = useState(null);

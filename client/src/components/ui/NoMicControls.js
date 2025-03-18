@@ -1,8 +1,11 @@
-// src/components/NoMicControls.js
+// src/components/ui/NoMicControls.js
 import React from 'react';
 import { motion } from 'framer-motion';
 import { BsCheckCircle, BsXCircle, BsVolumeUp } from 'react-icons/bs';
 
+/**
+ * Alternative controls for users without microphones
+ */
 const NoMicControls = ({ 
   onCorrect, 
   onIncorrect, 

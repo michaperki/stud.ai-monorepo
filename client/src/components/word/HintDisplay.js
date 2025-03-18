@@ -1,9 +1,12 @@
-// src/components/EnhancedHintDisplay.js
+// src/components/word/HintDisplay.js
 import React from 'react';
 import { motion } from 'framer-motion';
 import { BsLightbulb, BsVolumeUp, BsPuzzle, BsType, BsTag } from 'react-icons/bs';
 
-const EnhancedHintDisplay = ({ hint }) => {
+/**
+ * Displays progressive hints for words based on attempt count
+ */
+const HintDisplay = ({ hint }) => {
   if (!hint) return null;
   
   // Get appropriate icon based on hint type
@@ -43,7 +46,7 @@ const EnhancedHintDisplay = ({ hint }) => {
   
   return (
     <motion.div 
-      className="enhanced-hint-container"
+      className="hint-container"
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
@@ -71,4 +74,4 @@ const EnhancedHintDisplay = ({ hint }) => {
   );
 };
 
-export default EnhancedHintDisplay;
+export default HintDisplay;

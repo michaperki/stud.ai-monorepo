@@ -1,8 +1,11 @@
-// src/components/StatusIndicator.js
+// src/components/feedback/StatusIndicator.js
 import React from 'react';
 import { motion } from 'framer-motion';
 import { BsMic, BsCheckCircle, BsMicMute } from 'react-icons/bs';
 
+/**
+ * Displays the current recording status with appropriate icons and animations
+ */
 const StatusIndicator = ({ recordingState }) => {
   // Different configurations based on state
   const stateConfig = {

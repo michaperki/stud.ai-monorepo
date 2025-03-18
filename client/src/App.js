@@ -7,8 +7,8 @@ import AppLayout from './layouts/AppLayout';
 import WelcomeScreen from './containers/WelcomeScreen';
 import PracticeArea from './containers/PracticeArea';
 import Sidebar from './containers/Sidebar';
-import MicrophoneErrorModal from './components/MicrophoneErrorModal';
-import MicrophoneDiagnostics from './components/MicrophoneDiagnostics';
+import MicrophoneErrorModal from './components/modals/MicrophoneErrorModal';
+import MicrophoneDiagnostics from './components/audio/MicrophoneDiagnostics';
 
 // Context providers
 import { SessionProvider } from './contexts/SessionContext';

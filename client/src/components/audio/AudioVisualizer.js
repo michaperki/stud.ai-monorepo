@@ -1,4 +1,4 @@
-// src/components/EnhancedSessionStats.js
+// src/components/history/SessionStats.js
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -21,7 +21,10 @@ const formatTime = (seconds) => {
   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 };
 
-const EnhancedSessionStats = ({ 
+/**
+ * Displays detailed session statistics with expandable sections
+ */
+const SessionStats = ({ 
   session, 
   stats, 
   history = [],
@@ -68,7 +71,7 @@ const EnhancedSessionStats = ({
     .slice(0, 3);
   
   return (
-    <div className="enhanced-stats-section">
+    <div className="stats-section">
       <div className="section-header" onClick={() => setExpanded(!expanded)}>
         <h3>
           <BsBarChart className="section-icon" />
@@ -211,7 +214,6 @@ const EnhancedSessionStats = ({
         )}
       </AnimatePresence>
       
-      {/* Add styles to your CSS */}
       <style jsx>{`
         .stats-container {
           padding: 1rem;
@@ -346,4 +348,4 @@ const EnhancedSessionStats = ({
   );
 };
 
-export default EnhancedSessionStats;
+export default SessionStats;

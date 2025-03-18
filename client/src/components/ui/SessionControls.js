@@ -1,9 +1,12 @@
-// src/components/SessionControls.js
+// src/components/ui/SessionControls.js
 import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { BsPlayFill, BsPauseFill, BsStopFill } from 'react-icons/bs';
-import { useSession } from '../contexts/SessionContext';
+import { useSession } from '../../contexts/SessionContext';
 
+/**
+ * Controls for managing an active session (pause/resume/end)
+ */
 const formatTime = (seconds) => {
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;

@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BsVolumeUp, BsInfoCircle } from 'react-icons/bs';
-import WordMetadata from './WordMetadata';
+import WordMetadata from './WordMetaData';
 
 const WordDisplay = ({ 
   word, 

@@ -1,8 +1,8 @@
 import React from 'react';
-import HistoryDisplay from '../components/HistoryDisplay';
-import SettingsPanel from '../components/SettingsPanel';
-import VocabularySettings from '../components/VocabularySettings';
-import EnhancedSessionStats from '../components/EnhancedSessionStats';
+import HistoryDisplay from '../components/history/HistoryDisplay';
+import SettingsPanel from '../components/settings/SettingsPanel';
+import VocabularySettings from '../components/settings/VocabularySettings';
+import SessionStats from '../components/history/SessionStats';
 
 /**
  * Sidebar component containing history, settings and session stats
@@ -37,7 +37,7 @@ const Sidebar = ({
       />
       
       {state.session.active && 
-        <EnhancedSessionStats 
+        <SessionStats 
           session={state.session} 
           stats={state.stats} 
           history={state.history} 
