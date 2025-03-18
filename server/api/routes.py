@@ -1,7 +1,7 @@
 
 # server/api/routes.py
 
-from fastapi import APIRouter, HTTPException, UploadFile, File, Query, Response
+from fastapi import APIRouter, HTTPException, UploadFile, File, Query, Response, Request
 from fastapi.responses import JSONResponse
 import random, base64, os, traceback, tempfile, logging
 import mimetypes
@@ -220,7 +220,7 @@ async def get_vocabulary_stats():
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/check_answer/{word:path}")
-async def check_answer(word: str, file: UploadFile = File(...)):
+async def check_answer(word: str, file: UploadFile = File(...), request: Request = None):
     temp_files = []  # Track temp files for cleanup
     try:
         logger.debug(f"Received audio file: {file.filename}, content_type: {file.content_type}")
@@ -231,42 +231,56 @@ async def check_answer(word: str, file: UploadFile = File(...)):
             temp_files.append(temp_filename)
             temp_file.write(content)
         
-        # Use the improved audio format detection
-        audio_format = determine_audio_format(content, file.filename, file.content_type)
-        logger.debug(f"Detected audio format: {audio_format}")
+        # Detect if this is an iOS device request based on file info
+        is_ios = (
+            file.content_type and 'quicktime' in file.content_type.lower() or
+            (file.filename and file.filename.lower().endswith(('.caf', '.m4a', '.mov'))) or
+            'iOS' in request.headers.get('User-Agent', '')
+        )
         
-        whisper_compatible_formats = ['flac', 'm4a', 'mp3', 'mp4', 'mpeg', 'mpga', 'oga', 'ogg', 'wav', 'webm']
-        transcription_file = temp_filename
+        logger.debug(f"iOS device detected: {is_ios}")
         
-        if not audio_format or audio_format not in whisper_compatible_formats:
-            logger.debug(f"Converting audio from {audio_format} to a compatible format")
-            try:
-                with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as wav_file:
-                    converted_filename = wav_file.name
-                    temp_files.append(converted_filename)
-                
-                import subprocess
-                cmd = [
-                    "ffmpeg", "-y", "-i", temp_filename, 
-                    "-acodec", "libmp3lame", 
-                    "-ab", "128k", 
-                    "-ac", "1",
-                    "-ar", "44100",
-                    converted_filename
-                ]
-                process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                stdout, stderr = process.communicate()
-                
-                if process.returncode != 0:
-                    logger.error(f"FFmpeg conversion failed: {stderr.decode()}")
+        # Always convert the audio to ensure compatibility
+        # This is more robust than trying to detect the format
+        try:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as mp3_file:
+                converted_filename = mp3_file.name
+                temp_files.append(converted_filename)
+            
+            import subprocess
+            # Use more flexible ffmpeg parameters for iOS media
+            cmd = [
+                "ffmpeg", "-y", 
+                "-f", "auto",  # Auto-detect input format
+                "-i", temp_filename, 
+                "-acodec", "libmp3lame", 
+                "-ab", "128k", 
+                "-ac", "1",  # Convert to mono
+                "-ar", "44100",  # Standard sample rate
+                converted_filename
+            ]
+            
+            process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            stdout, stderr = process.communicate()
+            
+            if process.returncode != 0:
+                logger.error(f"FFmpeg conversion failed: {stderr.decode()}")
+                # Fall back to pydub if ffmpeg fails
+                try:
                     from pydub import AudioSegment
+                    # Let pydub try to determine format automatically
                     audio = AudioSegment.from_file(temp_filename)
                     audio.export(converted_filename, format="mp3")
-                
-                logger.debug(f"Converted audio to MP3: {converted_filename}")
-                transcription_file = converted_filename
-            except Exception as conversion_error:
-                logger.error(f"Error converting audio: {conversion_error}")
+                    logger.debug("Converted audio using pydub as fallback")
+                except Exception as pydub_error:
+                    logger.error(f"Pydub conversion also failed: {str(pydub_error)}")
+                    raise Exception(f"Audio conversion failed: {str(pydub_error)}")
+            
+            logger.debug(f"Converted audio to MP3: {converted_filename}")
+            transcription_file = converted_filename
+        except Exception as conversion_error:
+            logger.error(f"Error converting audio: {conversion_error}")
+            raise HTTPException(status_code=500, detail=f"Failed to process audio file: {str(conversion_error)}")
         
         all_words = get_all_words()
         word_obj = next((w for w in all_words if w.hebrew == word or w.english == word), None)
@@ -337,6 +351,13 @@ async def check_answer(word: str, file: UploadFile = File(...)):
                     os.unlink(temp_file)
             except Exception as e:
                 logger.error(f"Error deleting temporary file {temp_file}: {str(e)}")
+@router.get("/get_audio_settings")
+async def get_audio_settings():
+    try:
+        return JSONResponse(settings.AUDIO_SETTINGS)
+    except Exception as e:
+        logger.exception("Error in get_audio_settings")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/get_audio_settings")
 async def get_audio_settings():
