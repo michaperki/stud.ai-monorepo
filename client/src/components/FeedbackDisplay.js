@@ -8,7 +8,8 @@ import {
   BsStopwatch, 
   BsMic, 
   BsVolumeUp,
-  BsFileEarmarkMusic
+  BsFileEarmarkMusic,
+  BsPauseFill,
 } from 'react-icons/bs';
 
 const FeedbackDisplay = ({ 
@@ -28,10 +29,42 @@ const FeedbackDisplay = ({
   const countdownTimerRef = useRef(null);
   // Ref for onNextWord so that changes in the callback don't trigger our effect.
   const onNextWordRef = useRef(onNextWord);
+  // Audio element ref for recording playback
+  const audioRef = useRef(null);
+  // State to track if user recording is playing
+  const [isPlayingUserRecording, setIsPlayingUserRecording] = useState(false);
 
   useEffect(() => {
     onNextWordRef.current = onNextWord;
   }, [onNextWord]);
+
+  // Initialize audio element
+  useEffect(() => {
+    if (!audioRef.current) {
+      audioRef.current = new Audio();
+      
+      // Add event listeners to handle playback state
+      audioRef.current.addEventListener('play', () => setIsPlayingUserRecording(true));
+      audioRef.current.addEventListener('pause', () => setIsPlayingUserRecording(false));
+      audioRef.current.addEventListener('ended', () => setIsPlayingUserRecording(false));
+    }
+    
+    return () => {
+      // Clean up audio element and event listeners
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = '';
+        setIsPlayingUserRecording(false);
+      }
+    };
+  }, []);
+
+  // Update audio source when userRecordingUrl changes
+  useEffect(() => {
+    if (audioRef.current && userRecordingUrl) {
+      audioRef.current.src = userRecordingUrl;
+    }
+  }, [userRecordingUrl]);
 
   // Cleanup function for the timer.
   const cleanupTimer = () => {
@@ -94,15 +127,37 @@ const FeedbackDisplay = ({
     setCountdown(null);
   };
 
-  // Function to play user's recording
-  const playUserRecording = () => {
-    if (userRecordingUrl) {
-      const audio = new Audio(userRecordingUrl);
-      audio.play().catch(error => {
-        console.error('Error playing user recording:', error);
-      });
-    } else {
-      console.error('No user recording URL available');
+  // Function to play/pause user's recording
+  const toggleUserRecording = () => {
+    if (!audioRef.current || !userRecordingUrl) {
+      console.error('No user recording available to play');
+      return;
+    }
+
+    try {
+      if (isPlayingUserRecording) {
+        audioRef.current.pause();
+      } else {
+        // This resets the audio to the beginning if it was already played
+        if (audioRef.current.currentTime > 0 && audioRef.current.currentTime === audioRef.current.duration) {
+          audioRef.current.currentTime = 0;
+        }
+        
+        // Use a promise to catch any errors during playback
+        const playPromise = audioRef.current.play();
+        
+        if (playPromise !== undefined) {
+          playPromise.catch(error => {
+            console.error('Error playing user recording:', error);
+            // Special handling for mobile autoplay restrictions
+            if (error.name === 'NotAllowedError') {
+              console.warn('Autoplay prevented by browser. This may be due to mobile browser restrictions.');
+            }
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error toggling user recording playback:', error);
     }
   };
 
@@ -142,12 +197,15 @@ const FeedbackDisplay = ({
             {userRecordingUrl && (
               <motion.button
                 className="button circle secondary"
-                onClick={playUserRecording}
+                onClick={toggleUserRecording}
                 whileTap={{ scale: 0.95 }}
-                title="Play your recording"
+                title={isPlayingUserRecording ? "Pause your recording" : "Play your recording"}
                 style={{ minWidth: 'auto', padding: '0.25rem' }}
               >
-                <BsFileEarmarkMusic size={16} />
+                {isPlayingUserRecording ? 
+                  <BsPauseFill size={16} /> : 
+                  <BsFileEarmarkMusic size={16} />
+                }
               </motion.button>
             )}
           </div>
