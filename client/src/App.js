@@ -1,4 +1,3 @@
-
 // src/App.js
 import React, { useReducer, useEffect, useRef, useCallback, useState } from 'react';
 import { Toaster, toast } from 'react-hot-toast';
@@ -30,6 +29,8 @@ export default function App() {
   const [state, dispatch] = useReducer(appReducer, initialState);
   const { playTTS } = useTTS();
   const [showDiagnostics, setShowDiagnostics] = useState(false);
+  // New state for user recording URL
+  const [userRecordingUrl, setUserRecordingUrl] = useState(null);
   
   // Session refs for timer and pause state
   const sessionTimerRef = useRef(null);
@@ -94,6 +95,11 @@ export default function App() {
     }
     dispatch({ type: 'SET_RECORDING_STATE', payload: 'recorded' });
     dispatch({ type: 'SET_LOADING', payload: true });
+    
+    // Create and save URL for the audio blob
+    const url = URL.createObjectURL(audioBlob);
+    setUserRecordingUrl(url);
+    
     try {
       if (!word) throw new Error('No word provided to check answer');
       const data = await api.checkAnswer(word, audioBlob);
@@ -254,7 +260,7 @@ export default function App() {
     setShowDiagnostics(false);
   }, [retryMicrophoneAccess]);
 
-  // Preserve handleManualFeedback unchanged
+  // Handle manual feedback for no-mic mode
   function handleManualFeedback(isCorrect) {
     const feedbackData = {
       user_response: state.currentWord,
@@ -276,6 +282,10 @@ export default function App() {
       payload: { isCorrect, word: state.currentWord },
     });
     dispatch({ type: 'SET_FEEDBACK', payload: feedbackData });
+    
+    // In no-mic mode, there's no recording URL to set
+    setUserRecordingUrl(null);
+    
     if (!isCorrect) {
       dispatch({ type: 'INCREMENT_ATTEMPTS' });
     }
@@ -369,6 +379,13 @@ export default function App() {
       return;
     }
     nextWordCalledRef.current = true;
+    
+    // Revoke the previous URL to avoid memory leaks
+    if (userRecordingUrl) {
+      URL.revokeObjectURL(userRecordingUrl);
+      setUserRecordingUrl(null);
+    }
+    
     dispatch({ type: 'RESET_WORD_STATE' });
     if (!state.session.paused) {
       state.practiceWithoutMic ? handleGetWordWithoutMic() : handleGetWord();
@@ -581,6 +598,7 @@ export default function App() {
                         sessionPaused={state.session.paused}
                         onPlayCorrectPronunciation={handlePlayCorrectPronunciation}
                         autoAdvanceDelay={state.settings.autoAdvanceDelay}
+                        userRecordingUrl={userRecordingUrl}
                       />
                     </motion.div>
                   )}
@@ -633,4 +651,3 @@ export default function App() {
     </SessionProvider>
   );
 }
-

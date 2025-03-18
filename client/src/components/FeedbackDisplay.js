@@ -1,4 +1,3 @@
-
 // src/components/FeedbackDisplay.js
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
@@ -8,7 +7,8 @@ import {
   BsArrowRightCircle, 
   BsStopwatch, 
   BsMic, 
-  BsVolumeUp 
+  BsVolumeUp,
+  BsFileEarmarkMusic
 } from 'react-icons/bs';
 
 const FeedbackDisplay = ({ 
@@ -17,7 +17,8 @@ const FeedbackDisplay = ({
   onNextWord, 
   sessionPaused, 
   onPlayCorrectPronunciation,
-  autoAdvanceDelay = 5
+  autoAdvanceDelay = 5,
+  userRecordingUrl = null // New prop for user's recording
 }) => {
   // State for the countdown value.
   const [countdown, setCountdown] = useState(null);
@@ -25,7 +26,7 @@ const FeedbackDisplay = ({
   const [activeFeedbackKey, setActiveFeedbackKey] = useState(null);
   // Ref for the timer so we can prevent re‑starting it.
   const countdownTimerRef = useRef(null);
-  // Ref for onNextWord so that changes in the callback don’t trigger our effect.
+  // Ref for onNextWord so that changes in the callback don't trigger our effect.
   const onNextWordRef = useRef(onNextWord);
 
   useEffect(() => {
@@ -93,6 +94,18 @@ const FeedbackDisplay = ({
     setCountdown(null);
   };
 
+  // Function to play user's recording
+  const playUserRecording = () => {
+    if (userRecordingUrl) {
+      const audio = new Audio(userRecordingUrl);
+      audio.play().catch(error => {
+        console.error('Error playing user recording:', error);
+      });
+    } else {
+      console.error('No user recording URL available');
+    }
+  };
+
   if (!feedback) return null;
   const isCorrect = feedback.is_correct;
 
@@ -124,7 +137,20 @@ const FeedbackDisplay = ({
       <div className="feedback-content">
         <div className="feedback-row">
           <span className="feedback-label">Your response:</span>
-          <span className="feedback-value">{feedback.user_response}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span className="feedback-value">{feedback.user_response}</span>
+            {userRecordingUrl && (
+              <motion.button
+                className="button circle secondary"
+                onClick={playUserRecording}
+                whileTap={{ scale: 0.95 }}
+                title="Play your recording"
+                style={{ minWidth: 'auto', padding: '0.25rem' }}
+              >
+                <BsFileEarmarkMusic size={16} />
+              </motion.button>
+            )}
+          </div>
         </div>
         <div className="feedback-row">
           <span className="feedback-label">Correct answer:</span>
@@ -220,4 +246,3 @@ const FeedbackDisplay = ({
 };
 
 export default FeedbackDisplay;
-
