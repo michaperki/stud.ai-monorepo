@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Toaster } from 'react-hot-toast';
-import { AnimatePresence } from 'framer-motion';
+import { AnimatePresence, LayoutGroup } from 'framer-motion';
 
 // Component imports
 import AppLayout from './layouts/AppLayout';
@@ -23,7 +23,7 @@ import { useMicrophoneManager } from './hooks/useMicrophoneManager';
 import * as api from './services/api';
 
 // CSS
-import './App.css';
+import './styles/index.css';
 
 export default function App() {
   // State management using custom hook
@@ -46,16 +46,23 @@ export default function App() {
     isRecording,
     stream,
     audioSettings,
+    recordingStatus, // Track recording status
     handleMicrophoneError,
     startRecording,
     stopRecording,
+    cancelRecording,
     retryMicrophoneAccess,
     handleUpdateAudioSettings
   } = useMicrophoneManager({
     state,
     dispatch,
     handleApiError,
-    setUserRecordingUrl
+    setUserRecordingUrl,
+    onRecordingStatus: (status) => {
+      // Update UI based on recording status changes
+      console.log('Recording status changed:', status);
+      // You can handle global UI updates based on status changes here
+    }
   });
 
   // Session management logic
@@ -191,65 +198,67 @@ export default function App() {
   return (
     <ThemeProvider>
       <SessionProvider value={sessionContextValue}>
-        <AppLayout 
-          state={state}
-          sessionContextValue={sessionContextValue}
-          togglePauseSession={togglePauseSession}
-          handleEndSession={handleEndSession}
-        >
-          {!isSessionActive ? (
-            <WelcomeScreen
-              loading={state.loading}
-              sessionHistory={state.sessionHistory}
-              handleStartSession={handleStartSession}
-              handleOpenDiagnostics={handleOpenDiagnostics}
-              microphoneAvailable={microphoneAvailable}
-            />
-          ) : (
-            <PracticeArea
-              state={state}
-              stream={stream}
-              isRecording={isRecording}
-              audioSettings={audioSettings}
-              stopRecording={stopRecording}
-              handleReplayTts={handleReplayTts}
-              handleManualFeedback={handleManualFeedback}
-              handleNextWord={handleNextWord}
-              handlePlayCorrectPronunciation={handlePlayCorrectPronunciation}
-              userRecordingUrl={userRecordingUrl}
-            />
-          )}
-
-          <Sidebar
+        <LayoutGroup>
+          <AppLayout 
             state={state}
-            handleUpdateSettings={handleUpdateSettings}
-            handleVocabularySettings={handleVocabularySettings}
-            handleChangeLanguage={handleChangeLanguage}
-            audioSettings={audioSettings}
-            handleUpdateAudioSettings={handleUpdateAudioSettings}
-          />
-        </AppLayout>
+            sessionContextValue={sessionContextValue}
+            togglePauseSession={togglePauseSession}
+            handleEndSession={handleEndSession}
+          >
+            {!isSessionActive ? (
+              <WelcomeScreen
+                loading={state.loading}
+                sessionHistory={state.sessionHistory}
+                handleStartSession={handleStartSession}
+                handleOpenDiagnostics={handleOpenDiagnostics}
+                microphoneAvailable={microphoneAvailable}
+              />
+            ) : (
+              <PracticeArea
+                state={state}
+                stream={stream}
+                isRecording={isRecording}
+                audioSettings={audioSettings}
+                stopRecording={stopRecording}
+                handleReplayTts={handleReplayTts}
+                handleManualFeedback={handleManualFeedback}
+                handleNextWord={handleNextWord}
+                handlePlayCorrectPronunciation={handlePlayCorrectPronunciation}
+                userRecordingUrl={userRecordingUrl}
+              />
+            )}
 
-        <AnimatePresence>
-          {state.microphoneError?.isOpen && (
-            <div className="modal-overlay">
-              {showDiagnostics ? (
-                <MicrophoneDiagnostics onClose={handleCloseErrorModal} />
-              ) : (
-                <MicrophoneErrorModal
-                  isOpen={state.microphoneError.isOpen}
-                  onClose={handleCloseErrorModal}
-                  errorMessage={state.microphoneError.message}
-                  onContinueWithoutMic={handleContinueWithoutMic}
-                  isCritical={state.microphoneError.isCritical}
-                  onRunDiagnostics={() => setShowDiagnostics(true)}
-                />
-              )}
-            </div>
-          )}
-        </AnimatePresence>
+            <Sidebar
+              state={state}
+              handleUpdateSettings={handleUpdateSettings}
+              handleVocabularySettings={handleVocabularySettings}
+              handleChangeLanguage={handleChangeLanguage}
+              audioSettings={audioSettings}
+              handleUpdateAudioSettings={handleUpdateAudioSettings}
+            />
+          </AppLayout>
 
-        <Toaster position="top-right" />
+          <AnimatePresence>
+            {state.microphoneError?.isOpen && (
+              <div className="modal-overlay">
+                {showDiagnostics ? (
+                  <MicrophoneDiagnostics onClose={handleCloseErrorModal} />
+                ) : (
+                  <MicrophoneErrorModal
+                    isOpen={state.microphoneError.isOpen}
+                    onClose={handleCloseErrorModal}
+                    errorMessage={state.microphoneError.message}
+                    onContinueWithoutMic={handleContinueWithoutMic}
+                    isCritical={state.microphoneError.isCritical}
+                    onRunDiagnostics={() => setShowDiagnostics(true)}
+                  />
+                )}
+              </div>
+            )}
+          </AnimatePresence>
+
+          <Toaster position="top-right" />
+        </LayoutGroup>
       </SessionProvider>
     </ThemeProvider>
   );

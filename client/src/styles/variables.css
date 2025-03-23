@@ -1,0 +1,83 @@
+/* 
+ * variables.css
+ * CSS variables used throughout the application
+ */
+
+:root {
+  /* Light theme (default) */
+  --primary-color: #4361ee;
+  --primary-color-rgb: 67, 97, 238;
+  --primary-light: #5b7af9;
+  --primary-dark: #3a53cc;
+  --secondary-color: #8d99ae;
+  --secondary-color-rgb: 141, 153, 174;
+  --danger-color: #ef476f;
+  --danger-color-rgb: 239, 71, 111;
+  --success-color: #06d6a0;
+  --success-color-rgb: 6, 214, 160;
+  --warning-color: #ffd166;
+  --warning-color-rgb: 255, 209, 102;
+  --background-color: #f8f9fa;
+  --card-color: #ffffff;
+  --text-color: #2b2d42;
+  --text-light: #8d99ae;
+  --text-light-rgb: 141, 153, 174;
+  --border-radius: 12px;
+  --shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --transition: all 0.3s ease;
+  --visualizer-bg: #1a1a2e;
+}
+
+/* Dark theme */
+[data-theme='dark'] {
+  --primary-color: #5b7af9;
+  --primary-color-rgb: 91, 122, 249;
+  --primary-light: #7994FF;
+  --primary-dark: #3A53CC;
+  --secondary-color: #a4aec3;
+  --secondary-color-rgb: 164, 174, 195;
+  --danger-color: #FF6B95;
+  --danger-color-rgb: 255, 107, 149;
+  --success-color: #0AECB1;
+  --success-color-rgb: 10, 236, 177;
+  --warning-color: #FFDE8D;
+  --warning-color-rgb: 255, 222, 141;
+  --background-color: #121212;
+  --card-color: #1e1e1e;
+  --text-color: #f8f9fa;
+  --text-light: #bdc3c7;
+  --text-light-rgb: 189, 195, 199;
+  --shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --visualizer-bg: #0f0f1e;
+}
+
+/* Base styles */
+body {
+  margin: 0;
+  font-family: 'Segoe UI', 'Roboto', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--background-color);
+  color: var(--text-color);
+  line-height: 1.5;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+  line-height: 1.2;
+}
+
+input, select, button, textarea {
+  font-family: inherit;
+}
+
+/* Focus styles for accessibility */
+a:focus,
+button:focus,
+input:focus,
+select:focus,
+textarea:focus {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}

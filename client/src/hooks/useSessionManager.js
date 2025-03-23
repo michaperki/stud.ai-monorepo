@@ -1,3 +1,4 @@
+// src/hooks/useSessionManager.js
 import { useRef, useCallback, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import * as api from '../services/api';
@@ -20,6 +21,8 @@ export const useSessionManager = ({
   const nextWordCalledRef = useRef(false);
   const sessionTimerRef = useRef(null);
   const sessionPausedRef = useRef(state.session.paused);
+  const audioPlayedRef = useRef(false); // Track if audio was already played
+  
   // Move hook declarations to top level to ensure they are always called
   const { playTTS } = useTTS();
 
@@ -71,7 +74,13 @@ export const useSessionManager = ({
   const handleReplayTts = useCallback(() => {
     if (!state.ttsAudio) return;
     const audioSrc = `data:audio/wav;base64,${state.ttsAudio}`;
+    
+    // Play the audio
     playTTS(audioSrc, () => {
+      // Set flag to indicate audio was played
+      audioPlayedRef.current = true;
+      
+      // Only start recording if session isn't paused
       if (!sessionPausedRef.current) {
         if (state.practiceWithoutMic) {
           dispatch({ type: 'SET_RECORDING_STATE', payload: 'no-mic-mode' });
@@ -115,7 +124,16 @@ export const useSessionManager = ({
       dispatch({ type: 'SET_WORD', payload: data.word });
       dispatch({ type: 'SET_TTS_AUDIO', payload: data.audio_base64 });
       nextWordCalledRef.current = false;
-      if (data.audio_base64) playTTS(`data:audio/wav;base64,${data.audio_base64}`);
+      
+      // Reset audio played flag for new word
+      audioPlayedRef.current = false;
+      
+      if (data.audio_base64) {
+        // Play the audio and set the flag
+        playTTS(`data:audio/wav;base64,${data.audio_base64}`);
+        audioPlayedRef.current = true;
+      }
+      
       dispatch({ type: 'SET_RECORDING_STATE', payload: 'no-mic-mode' });
     } catch (error) {
       handleApiError(error, 'Failed to fetch word');
@@ -143,8 +161,14 @@ export const useSessionManager = ({
       dispatch({ type: 'SET_TTS_AUDIO', payload: data.audio_base64 });
       if (data.metadata) dispatch({ type: 'SET_WORD_METADATA', payload: data.metadata });
       nextWordCalledRef.current = false;
+      
+      // Reset audio played flag for new word
+      audioPlayedRef.current = false;
+      
       if (data.audio_base64) {
+        // Play the audio and set the flag
         playTTS(`data:audio/wav;base64,${data.audio_base64}`, () => {
+          audioPlayedRef.current = true;
           if (!sessionPausedRef.current) {
             startRecording(data.word).catch(error => {
               if (error.name === 'NotFoundError' || error.name === 'NotAllowedError' || error.name === 'NotReadableError') {
@@ -179,6 +203,9 @@ export const useSessionManager = ({
 
   // Start session
   const handleStartSession = useCallback(async () => {
+    // Reset audio played flag when starting a new session
+    audioPlayedRef.current = false;
+    
     dispatch({ type: 'START_SESSION' });
     if (microphoneAvailable === false) {
       dispatch({ type: 'SET_PRACTICE_WITHOUT_MIC', payload: true });
@@ -223,6 +250,9 @@ export const useSessionManager = ({
         console.error('Error revoking object URL:', error);
       }
     }
+    
+    // Reset audio played flag for next word
+    audioPlayedRef.current = false;
     
     dispatch({ type: 'RESET_WORD_STATE' });
     
@@ -297,6 +327,7 @@ export const useSessionManager = ({
     startSession: handleStartSession,
     endSession: handleEndSession,
     togglePause: togglePauseSession,
+    hasPlayedAudio: audioPlayedRef.current // Expose audio played status to components
   };
 
   return {
@@ -308,6 +339,7 @@ export const useSessionManager = ({
     togglePauseSession,
     handleReplayTts,
     handleEndSession,
-    playTTS
+    playTTS,
+    hasPlayedAudio: audioPlayedRef.current
   };
 }

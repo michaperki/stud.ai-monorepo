@@ -22,10 +22,19 @@ const AppLayout = ({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
+      layout
     >
       <header className="app-header">
-        <h1 className="app-title">Hebrew Word Practice</h1>
-        <div className="app-controls">
+        <motion.h1 
+          className="app-title" 
+          layout
+        >
+          Hebrew Word Practice
+        </motion.h1>
+        <motion.div 
+          className="app-controls"
+          layout
+        >
           {isSessionActive && (
             <SessionControls
               sessionTime={state.session.time || 0}
@@ -35,7 +44,7 @@ const AppLayout = ({
             />
           )}
           <ThemeToggle />
-        </div>
+        </motion.div>
       </header>
 
       {state?.error && (
@@ -44,14 +53,18 @@ const AppLayout = ({
           initial={{ height: 0, opacity: 0 }} 
           animate={{ height: 'auto', opacity: 1 }} 
           exit={{ height: 0, opacity: 0 }}
+          layout
         >
           {state.error}
         </motion.div>
       )}
 
-      <main className="app-content">
+      <motion.main 
+        className="app-content"
+        layout
+      >
         {children}
-      </main>
+      </motion.main>
     </motion.div>
   );
 };

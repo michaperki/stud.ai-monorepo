@@ -1,0 +1,23 @@
+/* 
+ * index.css
+ * Main CSS entry point that imports all modular CSS files
+ */
+
+/* Base styles and variables */
+@import './variables.css';
+@import './layout.css';
+@import './buttons.css';
+
+/* Component-specific styles */
+@import './components/practice.css';
+@import './components/word.css';
+@import './components/feedback.css';
+@import './components/audio.css';
+@import './components/sidebar.css';
+@import './components/stats.css';
+
+/* Animation definitions */
+@import './animations.css';
+
+/* Responsive design rules (should be last) */
+@import './responsive.css';

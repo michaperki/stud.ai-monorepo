@@ -1,0 +1,345 @@
+/* 
+ * responsive.css
+ * Responsive design rules for different screen sizes
+ */
+
+/* Larger Desktops (1200px and up) */
+@media (min-width: 1200px) {
+  .app-container {
+    padding: 2.5rem;
+  }
+  
+  .practice-area {
+    padding: 2.5rem;
+  }
+  
+  .word-display h2 {
+    font-size: 4rem;
+  }
+}
+
+/* Regular Desktops (992px to 1199px) */
+@media (max-width: 1199px) {
+  .app-container {
+    padding: 2rem;
+  }
+}
+
+/* Tablets and Small Desktops (768px to 991px) */
+@media (max-width: 991px) {
+  .app-content {
+    grid-template-columns: 1fr;
+  }
+  
+  .app-sidebar {
+    order: -1;
+    margin-bottom: 2rem;
+  }
+  
+  /* Convert sidebar to horizontal accordion on tablets */
+  .app-sidebar {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+  }
+}
+
+/* Large Phones (576px to 767px) */
+@media (max-width: 767px) {
+  .app-container {
+    padding: 1.5rem 1rem;
+  }
+  
+  .app-header {
+    flex-direction: column;
+    align-items: flex-start;
+    margin-bottom: 1.5rem;
+  }
+  
+  .app-title {
+    font-size: 2rem;
+  }
+  
+  .app-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .practice-area {
+    padding: 1.5rem 1rem;
+  }
+  
+  .word-display h2 {
+    font-size: 2.5rem;
+  }
+  
+  /* Convert sidebar back to vertical for phones */
+  .app-sidebar {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  /* Adjust session controls */
+  .session-controls {
+    width: 100%;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 1rem;
+  }
+  
+  .session-stats {
+    width: 100%;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+  }
+  
+  /* Adjust feedback display */
+  .feedback-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .countdown-timer {
+    margin-left: 0;
+    margin-top: 0.5rem;
+  }
+  
+  .feedback-buttons {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .feedback-button {
+    width: 100%;
+  }
+  
+  /* Adjust no-mic controls */
+  .no-mic-buttons {
+    flex-direction: column;
+  }
+  
+  .no-mic-button {
+    width: 100%;
+  }
+  
+  /* Adjust history items */
+  .history-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .history-icon {
+    margin-bottom: 0.5rem;
+  }
+  
+  .history-time {
+    margin-top: 0.5rem;
+    align-self: flex-end;
+  }
+  
+  /* Welcome screen adjustments */
+  .welcome-screen {
+    padding: 2rem 1.5rem;
+  }
+  
+  .welcome-screen h2 {
+    font-size: 2rem;
+  }
+  
+  .welcome-screen p {
+    max-width: 100%;
+    font-size: 1rem;
+  }
+}
+
+/* Small Phones (575px and down) */
+@media (max-width: 575px) {
+  .app-container {
+    padding: 1rem 0.75rem;
+  }
+  
+  .practice-area {
+    padding: 1rem;
+  }
+  
+  .word-display h2 {
+    font-size: 2rem;
+  }
+  
+  .practice-instructions {
+    font-size: 0.9rem;
+    padding: 0.75rem 1rem;
+  }
+  
+  /* Make buttons full-width on very small screens */
+  .button.large {
+    width: 100%;
+  }
+  
+  /* Stats adjustments */
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .stats-summary {
+    grid-template-columns: 1fr 1fr;
+  }
+  
+  /* Chart tabs adjustments */
+  .chart-tabs {
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .tab-button {
+    flex: 0 0 auto;
+    font-size: 0.9rem;
+    padding: 0.4rem 0.8rem;
+  }
+  
+  /* Modals adjustments */
+  .modal-content {
+    max-width: 100%;
+    margin: 0 1rem;
+  }
+  
+  .modal-header {
+    padding: 1rem;
+  }
+  
+  .modal-body {
+    padding: 1rem;
+  }
+  
+  .modal-footer {
+    padding: 1rem;
+    flex-direction: column-reverse;
+  }
+  
+  .modal-footer .button {
+    width: 100%;
+    margin-top: 0.5rem;
+  }
+  
+  /* Audio visualizer adjustments */
+  .audio-visualizer {
+    height: 100px;
+  }
+  
+  .volume-indicator {
+    flex-wrap: wrap;
+  }
+  
+  /* Phonetic breakdown adjustments */
+  .phonetic-breakdown-parts {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .syllable {
+    width: 100%;
+    text-align: center;
+  }
+  
+  /* Word display adjustments */
+  .word-display-controls {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  
+  /* Metadata badges adjustment */
+  .metadata-badges {
+    margin-top: 0.5rem;
+    width: 100%;
+  }
+  
+  /* Settings panel adjustments */
+  .settings-group {
+    margin-bottom: 1rem;
+  }
+}
+
+/* Extra Small Phones (320px and down) */
+@media (max-width: 320px) {
+  .word-display h2 {
+    font-size: 1.75rem;
+  }
+  
+  .section-header {
+    padding: 0.75rem;
+  }
+  
+  .section-header h3 {
+    font-size: 1rem;
+  }
+  
+  .button {
+    padding: 0.6rem 1rem;
+    font-size: 0.9rem;
+  }
+  
+  .feedback-value {
+    font-size: 0.95rem;
+  }
+  
+  .feedback-content {
+    padding: 1rem;
+  }
+  
+  .audio-visualizer {
+    height: 80px;
+  }
+  
+  .phonetic-full {
+    font-size: 1rem;
+  }
+  
+  /* Fix for extremely small screens */
+  .history-time, 
+  .stat-value,
+  .feedback-label {
+    font-size: 0.8rem;
+  }
+  
+  .stats-group h4 {
+    font-size: 0.9rem;
+  }
+  
+  /* Ensure minimum spacing on smallest screens */
+  .practice-area, 
+  .welcome-screen,
+  .section-header {
+    gap: 0.5rem;
+  }
+}
+
+/* Print styles for potential future use */
+@media print {
+  .app-container {
+    padding: 0;
+  }
+  
+  .practice-area {
+    box-shadow: none;
+    border: 1px solid #ccc;
+  }
+  
+  .audio-visualizer-container,
+  .buttons,
+  .session-controls,
+  .app-sidebar {
+    display: none;
+  }
+  
+  .word-display h2 {
+    color: black;
+    -webkit-text-fill-color: black;
+  }
+  
+  body {
+    background-color: white;
+    color: black;
+  }
+}

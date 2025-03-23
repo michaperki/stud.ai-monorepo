@@ -1,22 +1,27 @@
 // src/components/feedback/StatusIndicator.js
 import React from 'react';
 import { motion } from 'framer-motion';
-import { BsMic, BsCheckCircle, BsMicMute } from 'react-icons/bs';
+import { BsMic, BsCheckCircle, BsMicMute, BsClock } from 'react-icons/bs';
 
 /**
  * Displays the current recording status with appropriate icons and animations
  */
-const StatusIndicator = ({ recordingState }) => {
+const StatusIndicator = ({ recordingState, feedbackVisible = false }) => {
+  // Don't show anything if feedback is visible
+  if (feedbackVisible) {
+    return null;
+  }
+  
   // Different configurations based on state
   const stateConfig = {
     idle: {
-      icon: <BsMic />,
+      icon: <BsMic size={16} />,
       text: 'Ready',
       className: 'idle',
       animate: {}
     },
     recording: {
-      icon: <BsMic />,
+      icon: <BsMic size={16} />,
       text: 'Recording...',
       className: 'recording',
       animate: { 
@@ -25,19 +30,32 @@ const StatusIndicator = ({ recordingState }) => {
       }
     },
     recorded: {
-      icon: <BsCheckCircle />,
+      icon: <BsCheckCircle size={16} />,
       text: 'Recording Complete',
       className: 'recorded',
       animate: {}
     },
     'no-mic-mode': {
-      icon: <BsMicMute />,
+      icon: <BsMicMute size={16} />,
       text: 'No Microphone Mode',
       className: 'no-mic',
       animate: {}
+    },
+    processing: {
+      icon: <BsClock size={16} />,
+      text: 'Processing...',
+      className: 'idle',
+      animate: {
+        rotate: [0, 360],
+        transition: { 
+          repeat: Infinity,
+          duration: 2
+        }
+      }
     }
   };
   
+  // Default to idle if state not found
   const config = stateConfig[recordingState] || stateConfig.idle;
   
   return (
@@ -45,7 +63,9 @@ const StatusIndicator = ({ recordingState }) => {
       className={`status-indicator ${config.className}`}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 10 }}
       transition={{ duration: 0.3 }}
+      layout="position"
     >
       <motion.div 
         className="status-icon"

@@ -4,7 +4,7 @@ import { useRef, useState, useCallback, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import * as api from '../services/api';
 
-// Helper functions added near the top
+// Helper functions 
 const forceFileExtension = (blob, extension) => {
   const newType = `audio/${extension.startsWith('.') ? extension.slice(1) : extension}`;
   return new Blob([blob], { type: newType });
@@ -14,7 +14,6 @@ const isIOSDevice = () => {
   return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 };
 
-// MIME type detection function
 const getBestMimeType = () => {
   const mimeTypes = [
     'audio/webm;codecs=opus',
@@ -36,7 +35,7 @@ const getBestMimeType = () => {
   return '';
 };
 
-const useRecorder = (onRecordingComplete, onMicrophoneError) => {
+const useRecorder = (onRecordingComplete, onMicrophoneError, onRecordingStatus) => {
   const [isRecording, setIsRecording] = useState(false);
   const [audioBlob, setAudioBlob] = useState(null);
   const [audioUrl, setAudioUrl] = useState(null);
@@ -49,11 +48,19 @@ const useRecorder = (onRecordingComplete, onMicrophoneError) => {
     minRecordingTime: 500,
     maxRecordingTime: 8000
   });
+  const [recordingStatus, setRecordingStatus] = useState('inactive'); // 'inactive', 'preparing', 'recording', 'processing', 'completed', 'failed'
   
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const currentWordRef = useRef(null);
   const recordingTimerRef = useRef(null);
+
+  // Update parent with recording status
+  useEffect(() => {
+    if (onRecordingStatus && recordingStatus) {
+      onRecordingStatus(recordingStatus);
+    }
+  }, [recordingStatus, onRecordingStatus]);
   
   useEffect(() => {
     const fetchAudioSettings = async () => {
@@ -75,12 +82,15 @@ const useRecorder = (onRecordingComplete, onMicrophoneError) => {
     fetchAudioSettings();
   }, []);
   
+  // Cleanup media resources and play stop sound
   const cleanupMediaResources = useCallback(() => {
     console.log('Cleaning up media resources');
+    
     if (recordingTimerRef.current) {
       clearTimeout(recordingTimerRef.current);
       recordingTimerRef.current = null;
     }
+    
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       console.log('Stopping existing recorder');
       try {
@@ -90,6 +100,7 @@ const useRecorder = (onRecordingComplete, onMicrophoneError) => {
       }
       mediaRecorderRef.current = null;
     }
+    
     if (stream) {
       console.log('Stopping existing stream tracks');
       stream.getTracks().forEach(track => {
@@ -98,14 +109,27 @@ const useRecorder = (onRecordingComplete, onMicrophoneError) => {
       });
       setStream(null);
     }
+    
+    setRecordingStatus('inactive');
+    
+    try {
+      const stopSound = new Audio('/recording-stop.mp3');
+      stopSound.volume = 0.4;
+      stopSound.play().catch(e => console.log('Could not play stop sound:', e));
+    } catch (e) {
+      console.log('Error playing stop sound:', e);
+    }
   }, [stream]);
   
   const stopRecording = useCallback(() => {
     console.log('stopRecording called');
+    setRecordingStatus('processing');
+    
     if (recordingTimerRef.current) {
       clearTimeout(recordingTimerRef.current);
       recordingTimerRef.current = null;
     }
+    
     const stopWithDelay = (delay = 0) => {
       if (delay > 0) {
         setTimeout(() => {
@@ -115,6 +139,7 @@ const useRecorder = (onRecordingComplete, onMicrophoneError) => {
         performStop();
       }
     };
+    
     const performStop = () => {
       if (mediaRecorderRef.current) {
         try {
@@ -144,9 +169,14 @@ const useRecorder = (onRecordingComplete, onMicrophoneError) => {
         setIsRecording(false);
       }
     };
+    
     const timeSinceRecordingStarted = isRecording ? Date.now() - (mediaRecorderRef.current?._startTime || 0) : Infinity;
     if (timeSinceRecordingStarted < 500) {
       stopWithDelay(500 - timeSinceRecordingStarted);
+      toast.info("Your recording was very short. Try speaking a bit longer next time for better results.", {
+        duration: 3000,
+        icon: '🎤'
+      });
     } else {
       stopWithDelay(0);
     }
@@ -154,29 +184,36 @@ const useRecorder = (onRecordingComplete, onMicrophoneError) => {
   
   useEffect(() => {
     if (microphoneAvailable !== null) return;
+    
     const checkMicrophoneAccess = async () => {
+      setRecordingStatus('checking');
       try {
         console.log('Checking microphone availability...');
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
           console.error('getUserMedia not supported in this browser');
           setMicrophoneAvailable(false);
           setError('Your browser does not support microphone access. Please try a different browser.');
+          setRecordingStatus('failed');
           if (onMicrophoneError) {
             onMicrophoneError(new Error('getUserMedia not supported in this browser'));
           }
           return;
         }
+        
         const devices = await navigator.mediaDevices.enumerateDevices();
         const hasAudioDevice = devices.some(device => device.kind === 'audioinput');
+        
         if (!hasAudioDevice) {
           console.error('No audio input devices detected');
           setMicrophoneAvailable(false);
           setError('No microphone detected on your device.');
+          setRecordingStatus('failed');
           if (onMicrophoneError) {
             onMicrophoneError(new Error('No microphone detected on your device.'));
           }
           return;
         }
+        
         try {
           console.log('Testing microphone access permission...');
           const tempStream = await navigator.mediaDevices.getUserMedia({ 
@@ -192,8 +229,10 @@ const useRecorder = (onRecordingComplete, onMicrophoneError) => {
             track.stop();
           });
           setMicrophoneAvailable(true);
+          setRecordingStatus('ready');
         } catch (permissionError) {
           console.warn('Microphone permission test failed:', permissionError);
+          setRecordingStatus('failed');
           if (permissionError.name === 'NotAllowedError' || permissionError.name === 'PermissionDeniedError') {
             setError('Microphone access denied. Please allow microphone access in your browser settings.');
             console.error('Permission denied by user or system');
@@ -216,30 +255,42 @@ const useRecorder = (onRecordingComplete, onMicrophoneError) => {
         console.error('Unexpected error checking microphone availability:', error);
         setMicrophoneAvailable(false);
         setError('Could not check microphone availability due to an unexpected error.');
+        setRecordingStatus('failed');
         if (onMicrophoneError) {
           onMicrophoneError(error);
         }
       }
     };
+    
     checkMicrophoneAccess();
   }, [microphoneAvailable, onMicrophoneError]);
   
   const startRecording = useCallback(async (word) => {
     try {
       console.log('StartRecording called for word:', word);
+      setRecordingStatus('preparing');
+      
       if (microphoneAvailable === false) {
         const error = new Error('No microphone available. Please connect a microphone and refresh the page.');
         console.error(error.message);
+        setRecordingStatus('failed');
         if (onMicrophoneError) {
           onMicrophoneError(error);
         }
         throw error;
       }
+      
       setError(null);
       audioChunksRef.current = [];
       currentWordRef.current = word;
       cleanupMediaResources();
-      console.log('Requesting microphone access...');
+      
+      toast.success("Recording is starting. Please speak clearly...", {
+        id: "recording-toast",
+        duration: 2000,
+        icon: '🎤'
+      });
+      
       let audioStream;
       try {
         console.log('Trying with advanced audio constraints...');
@@ -261,6 +312,7 @@ const useRecorder = (onRecordingComplete, onMicrophoneError) => {
         } catch (basicError) {
           console.error('Failed to get stream with basic constraints:', basicError);
           setMicrophoneAvailable(false);
+          setRecordingStatus('failed');
           let errorMessage = 'Could not access microphone';
           if (basicError.name === 'NotAllowedError' || basicError.name === 'PermissionDeniedError') {
             errorMessage = 'Microphone access was denied. Please allow microphone access in your browser settings.';
@@ -279,17 +331,19 @@ const useRecorder = (onRecordingComplete, onMicrophoneError) => {
           }
           setError(`${errorMessage} (${basicError.name})`);
           if (onMicrophoneError) {
-            const error = new Error(errorMessage);
-            error.originalError = basicError;
-            onMicrophoneError(error);
+            const err = new Error(errorMessage);
+            err.originalError = basicError;
+            onMicrophoneError(err);
           }
           throw basicError;
         }
       }
+      
       setStream(audioStream);
       setMicrophoneAvailable(true);
       console.log('Creating MediaRecorder...');
       let mediaRecorder;
+      
       try {
         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
         if (isIOS) {
@@ -314,6 +368,7 @@ const useRecorder = (onRecordingComplete, onMicrophoneError) => {
         console.error('Failed to create MediaRecorder with specific settings, using default:', recorderError);
         mediaRecorder = new MediaRecorder(audioStream);
       }
+      
       mediaRecorderRef.current = mediaRecorder;
       console.log('Current audio settings:', audioSettings);
       
@@ -324,54 +379,66 @@ const useRecorder = (onRecordingComplete, onMicrophoneError) => {
         }
       };
       
-      // Modified onstop handler with file extension fix
       mediaRecorder.onstop = () => {
         console.log('MediaRecorder stopped, creating audio blob');
         console.log('Chunks collected:', audioChunksRef.current.length);
+        
         if (recordingTimerRef.current) {
           clearTimeout(recordingTimerRef.current);
           recordingTimerRef.current = null;
         }
+        
         let totalSize = 0;
         audioChunksRef.current.forEach(chunk => {
           totalSize += chunk.size;
         });
+        
         if (totalSize < 1000) {
           console.warn('Insufficient audio data recorded, total size:', totalSize);
           toast.error('No audio was captured. Please try again and make sure you speak audibly.');
+          
           setTimeout(() => {
             cleanupMediaResources();
             setIsRecording(false);
+            setRecordingStatus('failed');
             if (onMicrophoneError) {
               onMicrophoneError(new Error('RETRY_RECORDING'));
             }
           }, 1000);
+          
           return;
         }
+        
         let blobType = mediaRecorderRef.current ? mediaRecorderRef.current.mimeType : '';
         if (!blobType || blobType === '') {
-          if (isIOSDevice()) {
-            blobType = 'audio/mp4';
-          } else {
-            blobType = 'audio/webm';
-          }
+          blobType = isIOSDevice() ? 'audio/mp4' : 'audio/webm';
         }
         console.log('Creating blob with MIME type:', blobType);
         let blob = new Blob(audioChunksRef.current, { type: blobType });
+        
         if (isIOSDevice()) {
           console.log('iOS device detected, using m4a extension for compatibility');
           blob = forceFileExtension(blob, 'm4a');
         } else if (blobType.includes('webm')) {
           blob = forceFileExtension(blob, 'webm');
         }
+        
         console.log('Final blob created, size:', blob.size, 'type:', blob.type);
         const url = URL.createObjectURL(blob);
         setAudioBlob(blob);
         setAudioUrl(url);
         setIsRecording(false);
+        setRecordingStatus('completed');
+        
+        toast.success("Recording complete! Processing your answer...", {
+          duration: 2000,
+          icon: '✅'
+        });
+        
         if (onRecordingComplete) {
           onRecordingComplete(blob, currentWordRef.current);
         }
+        
         cleanupMediaResources();
       };
       

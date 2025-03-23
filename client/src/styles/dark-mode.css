@@ -1,0 +1,96 @@
+/* 
+ * dark-mode.css
+ * Dark mode specific overrides
+ * Import this file after all other CSS files
+ */
+
+[data-theme='dark'] .audio-visualizer {
+  background-color: var(--visualizer-bg);
+}
+
+[data-theme='dark'] .volume-meter {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme='dark'] .history-item:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme='dark'] .settings-info {
+  background-color: rgba(91, 122, 249, 0.1);
+}
+
+[data-theme='dark'] .modal-content {
+  background-color: var(--card-color);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+[data-theme='dark'] .welcome-screen p {
+  color: var(--text-light);
+}
+
+[data-theme='dark'] .app-title {
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: brightness(1.2);
+}
+
+[data-theme='dark'] .settings-select {
+  background-color: var(--card-color);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: var(--text-color);
+}
+
+[data-theme='dark'] input[type="range"] {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme='dark'] .stats-group {
+  background-color: rgba(30, 30, 30, 0.5);
+}
+
+[data-theme='dark'] .chart-container {
+  background-color: var(--card-color);
+}
+
+[data-theme='dark'] .tab-button {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme='dark'] .tab-button.active {
+  background-color: var(--primary-color);
+}
+
+[data-theme='dark'] .chart-bar-container {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme='dark'] .button.outline {
+  border-color: var(--primary-color);
+}
+
+[data-theme='dark'] .challenging-word-item {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme='dark'] .challenging-count {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme='dark'] .feedback-container {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme='dark'] .score-bar-container {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme='dark'] .phonetic-breakdown-parts .syllable {
+  background-color: rgba(91, 122, 249, 0.2);
+}
+
+[data-theme='dark'] .phonetic-breakdown-parts .syllable.primary {
+  background-color: rgba(91, 122, 249, 0.3);
+}
